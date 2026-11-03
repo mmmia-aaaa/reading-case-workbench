@@ -1291,11 +1291,28 @@ const SB = {
   /* —— 登录会话（Supabase Auth，邮箱密码） —— */
   TOKEN_KEY: 'wb_sb_token',
   EMAIL_KEY: 'wb_sb_email',
+  REFRESH_KEY: 'wb_sb_refresh',
   get token(){ try{ return localStorage.getItem(this.TOKEN_KEY) || ''; }catch(_e){ return ''; } },
   set token(v){ try{ if(v) localStorage.setItem(this.TOKEN_KEY, v); else localStorage.removeItem(this.TOKEN_KEY); }catch(_e){} },
   get email(){ try{ return localStorage.getItem(this.EMAIL_KEY) || ''; }catch(_e){ return ''; } },
   set email(v){ try{ if(v) localStorage.setItem(this.EMAIL_KEY, v); else localStorage.removeItem(this.EMAIL_KEY); }catch(_e){} },
   get logged(){ return !!this.token; },
+  /* 用长期有效的 refresh_token 换取新 access_token（登录过期后自动续期） */
+  async refresh(){
+    let rt = '';
+    try{ rt = localStorage.getItem(this.REFRESH_KEY) || ''; }catch(_e){}
+    if(!rt) return false;
+    const r = await fetch(this.url + '/auth/v1/token?grant_type=refresh_token', {
+      method: 'POST',
+      headers: {'apikey': this.key, 'Content-Type': 'application/json'},
+      body: JSON.stringify({refresh_token: rt})
+    });
+    const j = await r.json().catch(() => ({}));
+    if(!r.ok || !j.access_token) return false;
+    this.token = j.access_token;
+    if(j.refresh_token){ try{ localStorage.setItem(this.REFRESH_KEY, j.refresh_token); }catch(_e){} }
+    return true;
+  },
   /* 邮箱密码登录：调 Supabase Auth 拿 access_token */
   async login(email, pwd){
     if(!SB.enabled) throw new Error('云端未启用');
@@ -1307,6 +1324,7 @@ const SB = {
     const j = await r.json().catch(() => ({}));
     if(!r.ok || !j.access_token) throw new Error((j.error_description || j.msg || '登录失败') + (j.error_code ? ' (' + j.error_code + ')' : ''));
     SB.token = j.access_token;
+    if(j.refresh_token){ try{ localStorage.setItem(SB.REFRESH_KEY, j.refresh_token); }catch(_e){} }
     if(email) SB.email = email;
     return j;
   },
@@ -1320,10 +1338,10 @@ const SB = {
     });
     const j = await r.json().catch(() => ({}));
     if(!r.ok || j.error) throw new Error((j.msg || j.error_description || '注册失败') + (j.error_code ? ' (' + j.error_code + ')' : ''));
-    if(j.access_token){ SB.token = j.access_token; if(email) SB.email = email; }   // 若未开启邮箱确认，signup 直接返回登录态
+    if(j.access_token){ SB.token = j.access_token; if(j.refresh_token){ try{ localStorage.setItem(SB.REFRESH_KEY, j.refresh_token); }catch(_e){} } if(email) SB.email = email; }   // 若未开启邮箱确认，signup 直接返回登录态
     return j;
   },
-  logout(){ SB.token = ''; SB.email = ''; }
+  logout(){ SB.token = ''; SB.email = ''; try{ localStorage.removeItem(SB.REFRESH_KEY); }catch(_e){} }
 };
 function sbHeaders(json){
   /* 已登录：用登录 session 的 access_token 授权（RLS 只认登录用户）；未登录退回 anon key */
@@ -1332,10 +1350,23 @@ function sbHeaders(json){
   if(json) h['Content-Type'] = 'application/json';
   return h;
 }
+/* 401 时自动刷新登录凭证并重试一次（登录过期自动续期，不再手动重登） */
+async function sbFetch(input, init){
+  let r = await fetch(input, init);
+  if(r.status === 401 && SB.logged){
+    const ok = await SB.refresh();
+    if(ok){
+      const isJson = init && init.headers && init.headers['Content-Type'] && String(init.headers['Content-Type']).indexOf('application/json') >= 0;
+      const next = Object.assign({}, init, {headers: sbHeaders(!!isJson)});
+      r = await fetch(input, next);
+    }
+  }
+  return r;
+}
 /* 云端读写文字 state（PostgREST，表 workbench_state，单行 id='main'） */
 async function cloudLoadState(){
   if(!SB.enabled) return null;
-  const r = await fetch(SB.url + '/rest/v1/workbench_state?select=data&id=eq.' + SB.stateId, {headers: sbHeaders()});
+  const r = await sbFetch(SB.url + '/rest/v1/workbench_state?select=data&id=eq.' + SB.stateId, {headers: sbHeaders()});
   if(r.status === 404 || r.status === 403 || r.status === 400) return null;
   if(!r.ok) throw new Error('云端读取失败 ' + r.status);
   const rows = await r.json();
@@ -1344,7 +1375,7 @@ async function cloudLoadState(){
 async function cloudSaveState(next){
   if(!SB.enabled) return;
   const body = {id: SB.stateId, data: next, updated_at: new Date().toISOString()};
-  const r = await fetch(SB.url + '/rest/v1/workbench_state?on_conflict=id', {
+  const r = await sbFetch(SB.url + '/rest/v1/workbench_state?on_conflict=id', {
     method: 'POST', headers: Object.assign(sbHeaders(true), {'Prefer': 'resolution=merge-duplicates'}),
     body: JSON.stringify(body)
   });
@@ -1353,21 +1384,21 @@ async function cloudSaveState(next){
 /* 云端读写文件（Supabase Storage，bucket=workbench，path=key） */
 async function cloudPutFile(key, blob){
   if(!SB.enabled) return;
-  const r = await fetch(SB.url + '/storage/v1/object/' + SB.bucket + '/' + encodeURIComponent(key), {
+  const r = await sbFetch(SB.url + '/storage/v1/object/' + SB.bucket + '/' + encodeURIComponent(key), {
     method: 'POST', headers: sbHeaders(), body: blob
   });
   if(!r.ok && r.status !== 200 && r.status !== 201) throw new Error('云端上传失败 ' + r.status);
 }
 async function cloudGetFile(key){
   if(!SB.enabled) return null;
-  const r = await fetch(SB.url + '/storage/v1/object/' + SB.bucket + '/' + encodeURIComponent(key), {headers: sbHeaders()});
+  const r = await sbFetch(SB.url + '/storage/v1/object/' + SB.bucket + '/' + encodeURIComponent(key), {headers: sbHeaders()});
   if(r.status === 404 || r.status === 403) return null;
   if(!r.ok) throw new Error('云端取回失败 ' + r.status);
   return await r.blob();
 }
 async function cloudDelFile(key){
   if(!SB.enabled) return;
-  const r = await fetch(SB.url + '/storage/v1/object/' + SB.bucket + '/' + encodeURIComponent(key), {
+  const r = await sbFetch(SB.url + '/storage/v1/object/' + SB.bucket + '/' + encodeURIComponent(key), {
     method: 'DELETE', headers: sbHeaders()
   });
   if(!r.ok && r.status !== 200 && r.status !== 204) throw new Error('云端删除失败 ' + r.status);
