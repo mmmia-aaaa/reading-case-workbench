@@ -1381,7 +1381,28 @@ function scheduleCloudSave(){
     cloudSaveState(state)
       .then(() => { if(typeof toast === 'function' && SB.enabled) toast('已同步到云端'); })
       .catch(e => { if(typeof toast === 'function') toast('云端同步失败：' + e.message); });
-  }, 800);
+  }, 250);
+}
+/* 自动轮询：每隔 15 秒从云端拉最新，跨设备实时同步（手机写的资料，电脑自动出现，无需刷新） */
+let _cloudPollTimer = null;
+function startCloudPolling(){
+  if(!SB.enabled || !SB.logged) return;
+  if(_cloudPollTimer) clearInterval(_cloudPollTimer);
+  _cloudPollTimer = setInterval(async () => {
+    try{
+      const cloud = await cloudLoadState();
+      if(!cloud) return;
+      const next = normalizeState(cloud);
+      if(JSON.stringify(next) !== JSON.stringify(state)){
+        state = next;
+        try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); }catch(_e){}
+        if(typeof setupFilter === 'function') setupFilter();
+        if(typeof render === 'function') render();
+        if(typeof updateAccountBar === 'function') updateAccountBar();
+        if(typeof toast === 'function') toast('已同步最新数据');
+      }
+    }catch(e){ /* 静默：下次轮询再试 */ }
+  }, 15000);
 }
 /* 启动时从云端拉最新 state，合并到本地（云端为权威，仅云端有数据时采用） */
 async function syncFromCloud(){
@@ -1394,9 +1415,14 @@ async function syncFromCloud(){
       try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); }catch(_e){}
       if(typeof setupFilter === 'function') setupFilter();
       if(typeof render === 'function') render();
+      if(typeof updateAccountBar === 'function') updateAccountBar();
       if(typeof toast === 'function') toast('已从云端同步');
     }
-  }catch(e){ if(typeof toast === 'function') toast('云端同步失败：' + e.message); }
+    startCloudPolling();
+  }catch(e){
+    if(typeof toast === 'function') toast('云端同步失败：' + e.message);
+    startCloudPolling();
+  }
 }
 /* —— 登录拦截：云端启用且未登录时，显示登录页，登录成功后才允许进入 —— */
 let _loginShown = false;
@@ -1492,7 +1518,7 @@ function ensureLoggedIn(){
   ov.querySelector('#sbLoginPwd2').addEventListener('keydown', e => { if(e.key === 'Enter') doSignup(); });
   setTab();
 }
-/* 登录态展示：在侧边栏头部显示当前登录账号 + 退出登录（仅云端模式） */
+/* 登录态展示：侧边栏显示头像 + 昵称 + 编辑资料 + 退出（仅云端模式） */
 function updateAccountBar(){
   if(!SB.enabled) return;
   const head = document.querySelector('.sidebar-head');
@@ -1500,20 +1526,104 @@ function updateAccountBar(){
   const old = head.querySelector('#sbAccountBar');
   if(old) old.remove();
   if(!SB.logged) return;
-  const shown = SB.email || '已登录';
+  const p = (state && state.profile) || {};
+  const name = ((p.name || '').trim()) || (SB.email || '已登录');
+  const avatar = (p.avatar || '').trim();
   const bar = document.createElement('div');
   bar.id = 'sbAccountBar';
-  bar.style.cssText = 'margin-top:10px;padding:6px 10px;background:rgba(138,111,78,.14);border:1px solid #5a4836;border-radius:8px;display:flex;align-items:center;gap:8px;font-size:12px;color:#e8ddcc;';
-  const txt = document.createElement('span');
-  txt.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
-  txt.textContent = '👤 ' + shown;
+  bar.style.cssText = 'margin-top:10px;padding:8px 10px;background:rgba(138,111,78,.14);border:1px solid #5a4836;border-radius:10px;display:flex;align-items:center;gap:9px;font-size:12px;color:#e8ddcc;';
+  const av = document.createElement('div');
+  av.style.cssText = 'width:38px;height:38px;border-radius:50%;flex-shrink:0;background:#3A2C23;border:1px solid #5a4836;display:flex;align-items:center;justify-content:center;font-size:16px;color:#cbb998;overflow:hidden;';
+  if(avatar){ av.style.backgroundImage = 'url(' + avatar + ')'; av.style.backgroundSize = 'cover'; av.style.backgroundPosition = 'center'; }
+  else av.textContent = name.charAt(0) || '👤';
+  const mid = document.createElement('div');
+  mid.style.cssText = 'flex:1;min-width:0;';
+  const nm = document.createElement('div');
+  nm.style.cssText = 'font-size:13px;font-weight:600;color:#f0e7d8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+  nm.textContent = name;
+  const em = document.createElement('div');
+  em.style.cssText = 'font-size:11px;color:#9B8775;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+  em.textContent = SB.email || '';
+  mid.appendChild(nm); mid.appendChild(em);
+  const edit = document.createElement('button');
+  edit.textContent = '编辑';
+  edit.style.cssText = 'border:1px solid #5a4836;background:transparent;color:#cbb998;cursor:pointer;font-size:12px;padding:3px 8px;border-radius:6px;';
+  edit.onclick = () => openProfileEditor();
   const out = document.createElement('button');
   out.textContent = '退出';
-  out.style.cssText = 'border:1px solid #5a4836;background:transparent;color:#d98a7a;cursor:pointer;font-size:12px;padding:2px 8px;border-radius:6px;';
+  out.style.cssText = 'border:1px solid #5a4836;background:transparent;color:#d98a7a;cursor:pointer;font-size:12px;padding:3px 8px;border-radius:6px;';
   out.onclick = () => { if(confirm('确定退出登录吗？')){ SB.logout(); location.reload(); } };
-  bar.appendChild(txt);
+  bar.appendChild(av);
+  bar.appendChild(mid);
+  bar.appendChild(edit);
   bar.appendChild(out);
   head.appendChild(bar);
+}
+/* 编辑个人资料：输入名字 + 上传头像，保存后同步到云端 */
+function openProfileEditor(){
+  const p = (state && state.profile) || {};
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(18,15,13,0.92);display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML =
+    '<div style="background:#231d18;border:1px solid #8a6f4e;border-radius:14px;padding:26px 30px;max-width:360px;width:90%;color:#e8ddcc;font-family:system-ui,sans-serif;">' +
+      '<div style="font-size:17px;font-weight:700;margin-bottom:14px;">编辑我的资料</div>' +
+      '<div style="margin-bottom:12px;">' +
+        '<label style="display:block;font-size:13px;color:#cbb998;margin-bottom:6px;">名字（昵称）</label>' +
+        '<input id="profName" type="text" placeholder="输入你的名字" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #5a4836;border-radius:8px;background:#17120e;color:#f0e7d8;font-size:14px;outline:none;">' +
+      '</div>' +
+      '<div style="margin-bottom:12px;">' +
+        '<label style="display:block;font-size:13px;color:#cbb998;margin-bottom:6px;">头像</label>' +
+        '<input id="profAvatarInput" type="file" accept="image/*" style="width:100%;font-size:12px;color:#cbb998;">' +
+        '<div id="profAvatarPrev" style="margin-top:8px;width:56px;height:56px;border-radius:50%;background:#3A2C23;border:1px solid #5a4836;background-size:cover;background-position:center;"></div>' +
+      '</div>' +
+      '<div style="text-align:center;color:#9B8775;font-size:12px;margin-bottom:12px;">保存后名字和头像会同步到云端，手机和电脑都能看到</div>' +
+      '<div style="display:flex;gap:10px;">' +
+        '<button id="profCancel" style="flex:1;padding:10px;background:transparent;color:#cbb998;border:1px solid #5a4836;border-radius:8px;font-size:14px;cursor:pointer;">取消</button>' +
+        '<button id="profSave" style="flex:1;padding:10px;background:#8a6f4e;color:#1d1510;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">保存</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+  const inp = overlay.querySelector('#profName');
+  inp.value = (p.name || '') || '';
+  const avInput = overlay.querySelector('#profAvatarInput');
+  const avPrev = overlay.querySelector('#profAvatarPrev');
+  if(p.avatar){ avPrev.style.backgroundImage = 'url(' + p.avatar + ')'; }
+  let newAvatar = p.avatar || '';
+  avInput.addEventListener('change', () => {
+    const file = avInput.files && avInput.files[0];
+    if(!file) return;
+    const rd = new FileReader();
+    rd.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const size = 200;
+        const cv = document.createElement('canvas');
+        const r = Math.min(size / img.width, size / img.height, 1);
+        cv.width = Math.max(1, Math.round(img.width * r));
+        cv.height = Math.max(1, Math.round(img.height * r));
+        const ctx = cv.getContext('2d');
+        ctx.drawImage(img, 0, 0, cv.width, cv.height);
+        newAvatar = cv.toDataURL('image/jpeg', 0.82);
+        avPrev.style.backgroundImage = 'url(' + newAvatar + ')';
+      };
+      img.src = rd.result;
+    };
+    rd.readAsDataURL(file);
+  });
+  overlay.querySelector('#profCancel').onclick = () => overlay.remove();
+  overlay.querySelector('#profSave').onclick = () => {
+    const name = inp.value.trim();
+    const next = JSON.parse(JSON.stringify(state));
+    if(!next.profile) next.profile = {};
+    next.profile.name = name;
+    next.profile.avatar = newAvatar;
+    try{
+      commitState(next);
+      overlay.remove();
+      updateAccountBar();
+      toast('资料已保存并同步到云端');
+    }catch(e){ toast('保存失败：' + e.message); }
+  };
 }
 const SLOTS = 50;
 const STORAGE_KEY = 'reading_case_workbench_v1';
