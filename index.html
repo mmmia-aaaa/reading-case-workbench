@@ -1282,10 +1282,21 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 */
 const SB_LOC = (typeof location !== 'undefined' && location.search) ? location.search : '';
 const SB_PARAMS = SB_LOC ? new URLSearchParams(SB_LOC) : new URLSearchParams();
+/* 云端配置：优先 URL 参数；否则用本地记住的配置（首次带参登录后记住，之后免参数直连） */
+const SB_CFG_KEY = 'wb_sb_cfg';
+function sbCfg(){
+  const u = SB_PARAMS.get('sbUrl'), k = SB_PARAMS.get('sbKey');
+  if(u && k) return {url: u.replace(/\/+$/, ''), key: k};
+  try{
+    const c = JSON.parse(localStorage.getItem(SB_CFG_KEY) || 'null');
+    if(c && c.url && c.key) return {url: c.url.replace(/\/+$/, ''), key: c.key};
+  }catch(_e){}
+  return null;
+}
 const SB = {
-  enabled: !!SB_PARAMS.get('sbUrl') && !!SB_PARAMS.get('sbKey'),
-  url: (SB_PARAMS.get('sbUrl') || '').replace(/\/+$/, ''),
-  key: SB_PARAMS.get('sbKey') || '',
+  enabled: !!sbCfg(),
+  url: (sbCfg() || {}).url || '',
+  key: (sbCfg() || {}).key || '',
   bucket: 'workbench',
   stateId: 'main',
   /* —— 登录会话（Supabase Auth，邮箱密码） —— */
@@ -1325,6 +1336,7 @@ const SB = {
     if(!r.ok || !j.access_token) throw new Error((j.error_description || j.msg || '登录失败') + (j.error_code ? ' (' + j.error_code + ')' : ''));
     SB.token = j.access_token;
     if(j.refresh_token){ try{ localStorage.setItem(SB.REFRESH_KEY, j.refresh_token); }catch(_e){} }
+    try{ localStorage.setItem(SB_CFG_KEY, JSON.stringify({url: SB.url, key: SB.key})); }catch(_e){}
     if(email) SB.email = email;
     return j;
   },
@@ -1338,7 +1350,7 @@ const SB = {
     });
     const j = await r.json().catch(() => ({}));
     if(!r.ok || j.error) throw new Error((j.msg || j.error_description || '注册失败') + (j.error_code ? ' (' + j.error_code + ')' : ''));
-    if(j.access_token){ SB.token = j.access_token; if(j.refresh_token){ try{ localStorage.setItem(SB.REFRESH_KEY, j.refresh_token); }catch(_e){} } if(email) SB.email = email; }   // 若未开启邮箱确认，signup 直接返回登录态
+    if(j.access_token){ SB.token = j.access_token; if(j.refresh_token){ try{ localStorage.setItem(SB.REFRESH_KEY, j.refresh_token); }catch(_e){} } try{ localStorage.setItem(SB_CFG_KEY, JSON.stringify({url: SB.url, key: SB.key})); }catch(_e){} if(email) SB.email = email; }   // 若未开启邮箱确认，signup 直接返回登录态
     return j;
   },
   logout(){ SB.token = ''; SB.email = ''; try{ localStorage.removeItem(SB.REFRESH_KEY); }catch(_e){} }
