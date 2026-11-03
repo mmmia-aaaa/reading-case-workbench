@@ -801,6 +801,34 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:44px;lette
   .img-block .list-head{display:block}
   .img-block .list-head .hint{display:block;margin-top:4px;line-height:1.6}
 }
+/* —— 写作区（参照 WonderPen：左侧文章列表 + 右侧编辑 + 底部字数统计） —— */
+.writing-panel{display:flex;height:calc(100vh - 190px);min-height:420px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--bg-2)}
+.writing-side{width:238px;flex:none;border-right:1px solid var(--line);background:var(--card);display:flex;flex-direction:column}
+.writing-side-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line)}
+.writing-side-title{font-size:13px;font-weight:700;color:var(--muted);letter-spacing:1px}
+.writing-new{background:var(--green);color:#1d1510;border:none;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:700;cursor:pointer}
+.writing-new:hover{filter:brightness(1.08)}
+.writing-list{flex:1;overflow-y:auto;padding:8px}
+.writing-item{padding:10px 12px;border-radius:9px;cursor:pointer;margin-bottom:4px;border:1px solid transparent}
+.writing-item:hover{background:var(--card-hover)}
+.writing-item.active{background:var(--card-deep);border-color:var(--green)}
+.writing-item-title{font-size:13.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.writing-item-meta{font-size:11px;color:var(--muted);margin-top:3px}
+.writing-empty{padding:24px 12px;text-align:center;color:var(--muted);font-size:12.5px;line-height:1.8}
+.writing-main{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg)}
+.writing-main-head{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--line)}
+.writing-title{flex:1;background:transparent;border:none;outline:none;color:var(--ink);font-size:18px;font-weight:700;padding:6px 0}
+.writing-title::placeholder{color:var(--muted)}
+.writing-del{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:6px 12px;font-size:12.5px;cursor:pointer}
+.writing-del:hover{color:#d98a7a;border-color:#d98a7a}
+.writing-content{flex:1;width:100%;border:none;outline:none;background:transparent;color:var(--ink);font-size:15.5px;line-height:1.9;padding:18px 22px;resize:none;font-family:inherit}
+.writing-content::placeholder{color:var(--muted)}
+.writing-stat{border-top:1px solid var(--line);padding:9px 18px;font-size:12px;color:var(--muted);display:flex;gap:16px}
+@media(max-width:640px){
+  .writing-panel{flex-direction:column;height:auto;min-height:0}
+  .writing-side{width:100%;border-right:none;border-bottom:1px solid var(--line);max-height:170px}
+  .writing-main{min-height:420px}
+}
 </style>
 </head>
 <body data-page-node-id="tkuWYF0eoLS63cHRGONj64">
@@ -844,6 +872,9 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:44px;lette
       </button>
       <button class="nav-item" data-tab="review">
         <span class="nav-icon">📔</span>复盘
+      </button>
+      <button class="nav-item" data-tab="writing">
+        <span class="nav-icon">🖋</span>写作
       </button>
     </nav>
 
@@ -900,6 +931,23 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:44px;lette
       <strong id="backupResultTitle"></strong><p id="backupResultText"></p>
     </section>
     <main id="grid" class="grid" data-page-node-id="pLSQYD5k88cte2vkQXWw3m"></main>
+    <section id="writingPanel" class="writing-panel" hidden>
+      <div class="writing-side">
+        <div class="writing-side-head">
+          <span class="writing-side-title">文章</span>
+          <button class="writing-new" id="btnAddWriting" title="新建文章">＋ 新建</button>
+        </div>
+        <div id="writingList" class="writing-list"></div>
+      </div>
+      <div class="writing-main">
+        <div class="writing-main-head">
+          <input id="writingTitle" class="writing-title" placeholder="文章标题…" maxlength="80">
+          <button class="writing-del" id="btnDelWriting" title="删除当前文章">删除</button>
+        </div>
+        <textarea id="writingContent" class="writing-content" placeholder="开始写作…"></textarea>
+        <div id="writingStat" class="writing-stat">字数 0 · 段落 0 · 字符 0</div>
+      </div>
+    </section>
   </div>
 </div>
 
@@ -1482,7 +1530,7 @@ function showConflictDialog(cloudUpdatedAt){
 }
 /* 自动合并云端与本地数据（按条目去重，各端新增都保留，同 id 以本地为准） */
 function mergeState(a, b){
-  const listKeys = ['books','cases','tips','snippets','topics','clients','reviews','materials','todos','publicReads','legacyPublicReads'];
+  const listKeys = ['books','cases','tips','snippets','topics','clients','reviews','materials','todos','publicReads','legacyPublicReads','writings'];
   const out = {};
   const keyOf = x => {
     if(x == null) return '_null_';
@@ -2139,6 +2187,14 @@ async function renderCaseImgBlocks(c, isNew){
 
 /* ---------- 主列表渲染 ---------- */
 function render(){
+  if(currentTab === 'writing'){
+    $('#grid').hidden = true;
+    $('#writingPanel').hidden = false;
+    renderWritingList();
+    return;
+  }
+  $('#writingPanel').hidden = true;
+  $('#grid').hidden = false;
   $('#grid').classList.toggle('stacked', ['public','notes'].includes(currentTab));
   const q = $('#search').value.trim();
   const f = $('#filter').value;
@@ -2203,6 +2259,81 @@ function render(){
     if(prevF) $('#filter').value = prevF;
     syncNoteBookOptions();
   }
+}
+
+/* —— 写作区（参照 WonderPen：多篇文章 + 底部实时字数统计，云端同步） —— */
+let currentWritingId = null;
+function writingCounts(text){
+  const s = text || '';
+  const chars = s.replace(/\s/g, '').length;
+  const paras = s.trim() ? s.split(/\n+/).filter(x => x.trim()).length : 0;
+  return { words: chars, paras, chars: s.length };
+}
+function renderWritingList(){
+  const list = state.writings || [];
+  const el = $('#writingList');
+  el.innerHTML = list.length
+    ? list.map(w => {
+        const c = writingCounts(w.content);
+        let d = '';
+        try{ d = w.updated ? (new Date(w.updated)).toLocaleDateString('zh-CN', {month:'numeric', day:'numeric'}) : ''; }catch(_e){}
+        return '<div class="writing-item' + (w.id===currentWritingId?' active':'') + '" data-wid="' + esc(w.id) + '">' +
+          '<div class="writing-item-title">' + esc(w.title || '未命名') + '</div>' +
+          '<div class="writing-item-meta">' + esc(d) + ' · ' + c.words + ' 字</div>' +
+        '</div>';
+      }).join('')
+    : '<div class="writing-empty">还没有文章<br>点「＋ 新建」开始写作</div>';
+  el.querySelectorAll('.writing-item').forEach(div => { div.onclick = () => selectWriting(div.dataset.wid); });
+}
+function currentWriting(){ return (state.writings||[]).find(w => w.id === currentWritingId); }
+function selectWriting(id){
+  currentWritingId = id;
+  const w = currentWriting();
+  $('#writingTitle').value = w ? w.title||'' : '';
+  $('#writingContent').value = w ? w.content||'' : '';
+  renderWritingList();
+  updateWritingStat();
+}
+function newWriting(){
+  if(!Array.isArray(state.writings)) state.writings = [];
+  const w = { id:'w' + Date.now(), title:'', content:'', updated:new Date().toISOString() };
+  state.writings.unshift(w);
+  currentWritingId = w.id;
+  commitState(state);
+  $('#writingTitle').value = ''; $('#writingContent').value = '';
+  renderWritingList(); updateWritingStat();
+  $('#writingTitle').focus();
+}
+function deleteWriting(){
+  if(!currentWritingId) return;
+  if(!confirm('确定删除这篇文章？')) return;
+  state.writings = (state.writings||[]).filter(w => w.id !== currentWritingId);
+  currentWritingId = state.writings.length ? state.writings[0].id : null;
+  commitState(state);
+  if(currentWritingId) selectWriting(currentWritingId);
+  else { $('#writingTitle').value=''; $('#writingContent').value=''; renderWritingList(); updateWritingStat(); }
+}
+function updateWritingStat(){
+  const c = writingCounts($('#writingContent').value);
+  $('#writingStat').textContent = '字数 ' + c.words + ' · 段落 ' + c.paras + ' · 字符 ' + c.chars;
+}
+function bindWriting(){
+  $('#btnAddWriting').onclick = newWriting;
+  $('#btnDelWriting').onclick = deleteWriting;
+  $('#writingTitle').addEventListener('input', () => {
+    const w = currentWriting(); if(!w) return;
+    w.title = $('#writingTitle').value;
+    w.updated = new Date().toISOString();
+    commitState(state);
+    renderWritingList();
+  });
+  $('#writingContent').addEventListener('input', () => {
+    const w = currentWriting(); if(!w) return;
+    w.content = $('#writingContent').value;
+    w.updated = new Date().toISOString();
+    commitState(state);
+    updateWritingStat();
+  });
 }
 
 function rateOf(items){
@@ -5168,7 +5299,7 @@ function normalizeState(d){
     return {...v,rev:!!v.rev};
   });
   if(s.snippets===undefined && Array.isArray(s.notes)) s.snippets=s.notes;
-  for(const key of ['books','cases','tips','snippets','publicReads','topics','materials','todos','legacyPublicReads','clients','reviews']) records(s,key);
+  for(const key of ['books','cases','tips','snippets','publicReads','topics','materials','todos','legacyPublicReads','clients','reviews','writings']) records(s,key);
   delete s.notes;
   s.books.forEach(b=>{
     b.slot=Number(b.slot);
@@ -5215,7 +5346,7 @@ function normalizeState(d){
     const seen = new Set();
     s.bookCats = s.bookCats.filter(x => { if(seen.has(x.key)) return false; seen.add(x.key); return true; });
   }
-  for(const key of ['cases','tips','snippets','topics','materials','todos','clients','reviews']){
+  for(const key of ['cases','tips','snippets','topics','materials','todos','clients','reviews','writings']){
     s[key].forEach(x=>{x.id=String(x.id || uid());}); unique(s[key],'id');
   }
   // 完整保留旧记录，再迁移到新选题，避免只拣几个字段导致资料消失。
@@ -5249,6 +5380,9 @@ function normalizeState(d){
     for(const k of ['text','date','subcat']) text(n,k);
     array(n,'tags'); n.tags=n.tags.map(String);
     if(!BOOK_CATS.some(c=>c.key===n.cat)){ if(n.cat) n.legacyCategory=n.cat; n.cat='other'; }
+  });
+  s.writings.forEach(w=>{
+    for(const k of ['title','content','updated']) text(w,k);
   });
   s.caseSeq=Math.max(Number.isInteger(s.caseSeq)?s.caseSeq:0,s.cases.reduce((n,c)=>Math.max(n,c.no||0),0));
   if(s.todayPick===undefined) s.todayPick=null;
@@ -5388,6 +5522,7 @@ $('#bCat').addEventListener('change', () => {
 });
 setupFilter();
 render();
+bindWriting();
 ensureLoggedIn();
 if(typeof updateAccountBar === 'function') updateAccountBar();
 if(SB.enabled && SB.logged) syncFromCloud();
