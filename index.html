@@ -1290,8 +1290,11 @@ const SB = {
   stateId: 'main',
   /* —— 登录会话（Supabase Auth，邮箱密码） —— */
   TOKEN_KEY: 'wb_sb_token',
+  EMAIL_KEY: 'wb_sb_email',
   get token(){ try{ return localStorage.getItem(this.TOKEN_KEY) || ''; }catch(_e){ return ''; } },
   set token(v){ try{ if(v) localStorage.setItem(this.TOKEN_KEY, v); else localStorage.removeItem(this.TOKEN_KEY); }catch(_e){} },
+  get email(){ try{ return localStorage.getItem(this.EMAIL_KEY) || ''; }catch(_e){ return ''; } },
+  set email(v){ try{ if(v) localStorage.setItem(this.EMAIL_KEY, v); else localStorage.removeItem(this.EMAIL_KEY); }catch(_e){} },
   get logged(){ return !!this.token; },
   /* 邮箱密码登录：调 Supabase Auth 拿 access_token */
   async login(email, pwd){
@@ -1304,6 +1307,7 @@ const SB = {
     const j = await r.json().catch(() => ({}));
     if(!r.ok || !j.access_token) throw new Error((j.error_description || j.msg || '登录失败') + (j.error_code ? ' (' + j.error_code + ')' : ''));
     SB.token = j.access_token;
+    if(email) SB.email = email;
     return j;
   },
   /* 邮箱密码注册：调 Supabase Auth signup 创建账号 */
@@ -1316,10 +1320,10 @@ const SB = {
     });
     const j = await r.json().catch(() => ({}));
     if(!r.ok || j.error) throw new Error((j.msg || j.error_description || '注册失败') + (j.error_code ? ' (' + j.error_code + ')' : ''));
-    if(j.access_token){ SB.token = j.access_token; }   // 若未开启邮箱确认，signup 直接返回登录态
+    if(j.access_token){ SB.token = j.access_token; if(email) SB.email = email; }   // 若未开启邮箱确认，signup 直接返回登录态
     return j;
   },
-  logout(){ SB.token = ''; }
+  logout(){ SB.token = ''; SB.email = ''; }
 };
 function sbHeaders(json){
   /* 已登录：用登录 session 的 access_token 授权（RLS 只认登录用户）；未登录退回 anon key */
@@ -1432,7 +1436,7 @@ function ensureLoggedIn(){
       '<div id="sbLoginMsg" style="text-align:center;color:#d98a7a;font-size:13px;margin-top:12px;min-height:18px;"></div>' +
     '</div>';
   document.body.appendChild(ov);
-  const finish = () => { ov.remove(); _loginShown = false; if(typeof syncFromCloud === 'function') syncFromCloud(); };
+  const finish = () => { ov.remove(); _loginShown = false; if(typeof updateAccountBar === 'function') updateAccountBar(); if(typeof syncFromCloud === 'function') syncFromCloud(); };
   const msg = ov.querySelector('#sbLoginMsg');
   const hint = ov.querySelector('#sbLoginHint');
   const mainBtn = ov.querySelector('#sbMainBtn');
@@ -1487,6 +1491,29 @@ function ensureLoggedIn(){
   ov.querySelector('#sbLoginPwd').addEventListener('keydown', e => { if(e.key === 'Enter'){ if(mode==='login') doLogin(); else doSignup(); } });
   ov.querySelector('#sbLoginPwd2').addEventListener('keydown', e => { if(e.key === 'Enter') doSignup(); });
   setTab();
+}
+/* 登录态展示：在侧边栏头部显示当前登录账号 + 退出登录（仅云端模式） */
+function updateAccountBar(){
+  if(!SB.enabled) return;
+  const head = document.querySelector('.sidebar-head');
+  if(!head) return;
+  const old = head.querySelector('#sbAccountBar');
+  if(old) old.remove();
+  if(!SB.logged) return;
+  const shown = SB.email || '已登录';
+  const bar = document.createElement('div');
+  bar.id = 'sbAccountBar';
+  bar.style.cssText = 'margin-top:10px;padding:6px 10px;background:rgba(138,111,78,.14);border:1px solid #5a4836;border-radius:8px;display:flex;align-items:center;gap:8px;font-size:12px;color:#e8ddcc;';
+  const txt = document.createElement('span');
+  txt.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+  txt.textContent = '👤 ' + shown;
+  const out = document.createElement('button');
+  out.textContent = '退出';
+  out.style.cssText = 'border:1px solid #5a4836;background:transparent;color:#d98a7a;cursor:pointer;font-size:12px;padding:2px 8px;border-radius:6px;';
+  out.onclick = () => { if(confirm('确定退出登录吗？')){ SB.logout(); location.reload(); } };
+  bar.appendChild(txt);
+  bar.appendChild(out);
+  head.appendChild(bar);
 }
 const SLOTS = 50;
 const STORAGE_KEY = 'reading_case_workbench_v1';
@@ -5132,6 +5159,7 @@ $('#bCat').addEventListener('change', () => {
 setupFilter();
 render();
 ensureLoggedIn();
+if(typeof updateAccountBar === 'function') updateAccountBar();
 if(SB.enabled && SB.logged) syncFromCloud();
 if(storageLoadError){
   setTimeout(()=>toast('本地存档读取失败，已阻止覆盖。请先导出原数据，再导入有效备份。'),700);
