@@ -1345,7 +1345,7 @@ async function cloudSaveState(next){
   if(!SB.enabled) return;
   const body = {id: SB.stateId, data: next, updated_at: new Date().toISOString()};
   const r = await fetch(SB.url + '/rest/v1/workbench_state?on_conflict=id', {
-    method: 'POST', headers: sbHeaders(true),
+    method: 'POST', headers: Object.assign(sbHeaders(true), {'Prefer': 'resolution=merge-duplicates'}),
     body: JSON.stringify(body)
   });
   if(r.status !== 200 && r.status !== 201) throw new Error('云端保存失败 ' + r.status);
@@ -1411,12 +1411,18 @@ async function syncFromCloud(){
     const cloud = await cloudLoadState();
     if(cloud){
       const next = normalizeState(cloud);
-      state = next;
-      try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); }catch(_e){}
-      if(typeof setupFilter === 'function') setupFilter();
-      if(typeof render === 'function') render();
-      if(typeof updateAccountBar === 'function') updateAccountBar();
-      if(typeof toast === 'function') toast('已从云端同步');
+      const sEmpty = o => (o.books||[]).length===0 && (o.cases||[]).length===0 && (o.notes||[]).length===0 && (o.topics||[]).length===0 && (o.clients||[]).length===0;
+      if(sEmpty(next) && !sEmpty(state)){
+        try{ await cloudSaveState(state); }catch(_e){}
+        if(typeof toast === 'function') toast('云端数据为空，已用本地数据恢复');
+      } else {
+        state = next;
+        try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); }catch(_e){}
+        if(typeof setupFilter === 'function') setupFilter();
+        if(typeof render === 'function') render();
+        if(typeof updateAccountBar === 'function') updateAccountBar();
+        if(typeof toast === 'function') toast('已从云端同步');
+      }
     }
     startCloudPolling();
   }catch(e){
