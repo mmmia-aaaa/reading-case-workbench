@@ -3,7 +3,7 @@
 <head data-page-node-id="xgVzCZ9ewpIqCbHLqWGaox">
 <meta charset="UTF-8" data-page-node-id="KOAWv5wwiovU0SaVO66Q0d">
 <meta name="viewport" content="width=device-width, initial-scale=1" data-page-node-id="HCc4qb7HEnWhmkBTavB00L">
-<title>我的阅读与案例工作台 · 2026-09-28 · v2</title>
+<title>瑶的工作台 · 2026-09-28 · v2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -813,7 +813,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:44px;lette
   <!-- 左侧导航栏 -->
   <aside class="sidebar" id="sidebar" data-page-node-id="wtnav-aside-001">
     <div class="sidebar-head" data-page-node-id="wtnav-head-001">
-      <h1 data-page-node-id="MTNqUGeOhzD10Hr9G9T5y7">我的阅读与案例工作台</h1>
+      <h1 data-page-node-id="MTNqUGeOhzD10Hr9G9T5y7">瑶的工作台</h1>
       <p class="sub">每本收好重点、金句与复盘</p>
     </div>
 
@@ -1436,13 +1436,16 @@ function startCloudPolling(){
       const cloud = await cloudLoadState();
       if(!cloud) return;
       const next = normalizeState(cloud.data);
-      if(JSON.stringify(next) !== JSON.stringify(state)){
-        state = next;
-        try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); }catch(_e){}
+      const merged = mergeState(next, state);
+      if(JSON.stringify(merged) !== JSON.stringify(state)){
+        state = merged;
+        try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(merged)); }catch(_e){}
+        try{ localStorage.setItem('wb_local_updated', new Date().toISOString()); }catch(_e){}
         if(typeof setupFilter === 'function') setupFilter();
         if(typeof render === 'function') render();
         if(typeof updateAccountBar === 'function') updateAccountBar();
-        if(typeof toast === 'function') toast('已同步最新数据');
+        if(typeof toast === 'function') toast('已自动同步最新数据');
+        try{ await cloudSaveState(state); }catch(_e){}
       }
     }catch(e){ /* 静默：下次轮询再试 */ }
   }, 15000);
@@ -1477,7 +1480,32 @@ function showConflictDialog(cloudUpdatedAt){
     ov.querySelector('#sbUseLocal').onclick = () => { ov.remove(); resolve('local'); };
   });
 }
-/* 启动时从云端拉最新 state，合并到本地（云端为权威，仅云端有数据时采用） */
+/* 自动合并云端与本地数据（按条目去重，各端新增都保留，同 id 以本地为准） */
+function mergeState(a, b){
+  const listKeys = ['books','cases','tips','snippets','topics','clients','reviews','materials','todos','publicReads','legacyPublicReads'];
+  const out = {};
+  const keyOf = x => {
+    if(x == null) return '_null_';
+    if(x.id !== undefined && x.id !== null) return 'id:' + x.id;
+    if(x.slot !== undefined && x.slot !== null) return 'slot:' + x.slot;
+    try{ return 'j:' + JSON.stringify(x); }catch(_e){ return '_null_'; }
+  };
+  for(const k of listKeys){
+    const A = Array.isArray(a[k]) ? a[k] : [];
+    const B = Array.isArray(b[k]) ? b[k] : [];
+    const map = {};
+    for(const x of B) map[keyOf(x)] = x;           // 本地优先
+    for(const x of A) if(!(keyOf(x) in map)) map[keyOf(x)] = x;  // 云端补充
+    out[k] = Object.keys(map).map(ik => map[ik]);
+  }
+  out.caseSeq = Math.max(Number(a.caseSeq)||0, Number(b.caseSeq)||0);
+  out.schemaVersion = Math.max(Number(a.schemaVersion)||0, Number(b.schemaVersion)||0, 2);
+  out.profile = (b.profile && Object.keys(b.profile).length) ? b.profile : (a.profile || {});
+  for(const k of Object.keys(a)){ if(!(k in out) && a[k] !== undefined) out[k] = a[k]; }
+  for(const k of Object.keys(b)){ if(!(k in out) && b[k] !== undefined) out[k] = b[k]; }
+  return out;
+}
+/* 启动时从云端拉最新 state，与本地自动合并（不再弹框，新增自动汇总） */
 async function syncFromCloud(){
   if(!SB.enabled) return;
   try{
@@ -1488,18 +1516,17 @@ async function syncFromCloud(){
       if(sEmpty(next) && !sEmpty(state)){
         try{ await cloudSaveState(state); }catch(_e){}
         if(typeof toast === 'function') toast('云端数据为空，已用本地数据恢复');
-      } else if(!sEmpty(next) && !sEmpty(state) && JSON.stringify(next) !== JSON.stringify(state)){
-        const choice = await showConflictDialog(cloud.updated_at);
-        if(choice === 'cloud'){
-          state = next;
-          try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); }catch(_e){}
+      } else if(!sEmpty(next) && !sEmpty(state)){
+        const merged = mergeState(next, state);
+        if(JSON.stringify(merged) !== JSON.stringify(state)){
+          state = merged;
+          try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(merged)); }catch(_e){}
+          try{ localStorage.setItem('wb_local_updated', new Date().toISOString()); }catch(_e){}
           if(typeof setupFilter === 'function') setupFilter();
           if(typeof render === 'function') render();
           if(typeof updateAccountBar === 'function') updateAccountBar();
-          if(typeof toast === 'function') toast('已采用云端版本');
-        } else {
+          if(typeof toast === 'function') toast('已自动合并云端与本地数据');
           try{ await cloudSaveState(state); }catch(_e){}
-          if(typeof toast === 'function') toast('已采用本机版本并同步到云端');
         }
       } else {
         state = next;
@@ -1531,7 +1558,7 @@ function ensureLoggedIn(){
     '<div style="background:#231d18;border:1px solid #8a6f4e;border-radius:14px;padding:30px 36px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.5);color:#e8ddcc;font-family:system-ui,sans-serif;">' +
       '<div style="text-align:center;margin-bottom:18px;">' +
         '<div style="font-size:30px;">🔮</div>' +
-        '<div style="font-size:20px;font-weight:700;margin-top:6px;">阅读案例工作台</div>' +
+        '<div style="font-size:20px;font-weight:700;margin-top:6px;">瑶的工作台</div>' +
         '<div id="sbLoginHint" style="color:#a89376;font-size:13px;margin-top:4px;">登录后访问云端数据</div>' +
       '</div>' +
       '<div style="display:flex;border:1px solid #5a4836;border-radius:9px;overflow:hidden;margin-bottom:16px;">' +
@@ -4939,7 +4966,7 @@ $('#backupResultClose').addEventListener('click',()=>$('#backupResult').hidden=t
 $('#btnExport').addEventListener('click',async()=>{
   const btn=$('#btnExport');if(btn.disabled) return;btn.disabled=true;
   try{
-    const fileName=`阅读案例工作台文字备份_${today()}.json`;
+    const fileName=`瑶的工作台文字备份_${today()}.json`;
     const raw=storageLoadError ? localStorage.getItem(STORAGE_KEY) : JSON.stringify(normalizeState(state),null,2);
     const blob=new Blob([raw || '{}'],{type:'application/json'});
     let saved=false;
@@ -4983,7 +5010,7 @@ async function buildBackupZip(){
   }
   zip.file('workbench.json',JSON.stringify(clean,null,2));
   zip.file('manifest.json',JSON.stringify(manifest,null,2));
-  zip.file('README.txt','阅读案例工作台完整备份\n在工作台点击「导入备份」，直接选择本 ZIP，即可恢复文字、书籍和案例图片。\n生成时间：'+new Date().toLocaleString());
+  zip.file('README.txt','瑶的工作台完整备份\n在工作台点击「导入备份」，直接选择本 ZIP，即可恢复文字、书籍和案例图片。\n生成时间：'+new Date().toLocaleString());
   return zip.generateAsync({type:'blob',compression:'STORE'},m=>toast('打包中 '+Math.round(m.percent)+'%…'));
 }
 $('#btnBackup').addEventListener('click',async()=>{
