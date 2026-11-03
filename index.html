@@ -1378,11 +1378,11 @@ async function sbFetch(input, init){
 /* 云端读写文字 state（PostgREST，表 workbench_state，单行 id='main'） */
 async function cloudLoadState(){
   if(!SB.enabled) return null;
-  const r = await sbFetch(SB.url + '/rest/v1/workbench_state?select=data&id=eq.' + SB.stateId, {headers: sbHeaders()});
+  const r = await sbFetch(SB.url + '/rest/v1/workbench_state?select=data,updated_at&id=eq.' + SB.stateId, {headers: sbHeaders()});
   if(r.status === 404 || r.status === 403 || r.status === 400) return null;
   if(!r.ok) throw new Error('云端读取失败 ' + r.status);
   const rows = await r.json();
-  return (rows && rows.length) ? rows[0].data : null;
+  return (rows && rows.length) ? {data: rows[0].data, updated_at: rows[0].updated_at} : null;
 }
 async function cloudSaveState(next){
   if(!SB.enabled) return;
@@ -1435,7 +1435,7 @@ function startCloudPolling(){
     try{
       const cloud = await cloudLoadState();
       if(!cloud) return;
-      const next = normalizeState(cloud);
+      const next = normalizeState(cloud.data);
       if(JSON.stringify(next) !== JSON.stringify(state)){
         state = next;
         try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); }catch(_e){}
@@ -1447,17 +1447,60 @@ function startCloudPolling(){
     }catch(e){ /* 静默：下次轮询再试 */ }
   }, 15000);
 }
+/* 云端与本地数据不一致时，弹出选择框，显示两边更新时间，由用户决定保留哪一份 */
+function showConflictDialog(cloudUpdatedAt){
+  return new Promise(resolve => {
+    let localTs = '';
+    try{ localTs = localStorage.getItem('wb_local_updated') || ''; }catch(_e){}
+    const fmt = ts => { if(!ts) return '未知'; const d = new Date(ts); if(isNaN(d.getTime())) return String(ts); try{ return d.toLocaleString('zh-CN', {hour12:false}); }catch(_e){ return String(ts); } };
+    const ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(18,15,13,0.92);display:flex;align-items:center;justify-content:center;';
+    ov.innerHTML =
+      '<div style="background:#231d18;border:1px solid #8a6f4e;border-radius:14px;padding:26px 30px;max-width:420px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,.5);color:#e8ddcc;font-family:system-ui,sans-serif;">' +
+        '<div style="font-size:19px;font-weight:700;text-align:center;margin-bottom:8px;">⚠️ 云端与本地数据不一致</div>' +
+        '<div style="font-size:13px;color:#b9a98c;text-align:center;margin-bottom:18px;">请选择保留哪一份（选中后会同步覆盖到另一边）</div>' +
+        '<div style="margin-bottom:14px;">' +
+          '<div style="font-size:14px;font-weight:600;margin-bottom:4px;">☁️ 云端版本</div>' +
+          '<div style="font-size:12px;color:#a89a80;">更新时间：' + fmt(cloudUpdatedAt) + '</div>' +
+        '</div>' +
+        '<div style="margin-bottom:22px;">' +
+          '<div style="font-size:14px;font-weight:600;margin-bottom:4px;">📱 本机版本</div>' +
+          '<div style="font-size:12px;color:#a89a80;">更新时间：' + fmt(localTs) + '</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:10px;">' +
+          '<button id="sbUseCloud" style="flex:1;background:#6b5034;border:1px solid #9a7b52;color:#f2e9d6;border-radius:8px;padding:10px 0;font-size:15px;cursor:pointer;">用云端版本</button>' +
+          '<button id="sbUseLocal" style="flex:1;background:#2f2a22;border:1px solid #6b5a3e;color:#e8ddcc;border-radius:8px;padding:10px 0;font-size:15px;cursor:pointer;">用本机版本</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(ov);
+    ov.querySelector('#sbUseCloud').onclick = () => { ov.remove(); resolve('cloud'); };
+    ov.querySelector('#sbUseLocal').onclick = () => { ov.remove(); resolve('local'); };
+  });
+}
 /* 启动时从云端拉最新 state，合并到本地（云端为权威，仅云端有数据时采用） */
 async function syncFromCloud(){
   if(!SB.enabled) return;
   try{
     const cloud = await cloudLoadState();
     if(cloud){
-      const next = normalizeState(cloud);
+      const next = normalizeState(cloud.data);
       const sEmpty = o => (o.books||[]).length===0 && (o.cases||[]).length===0 && (o.notes||[]).length===0 && (o.topics||[]).length===0 && (o.clients||[]).length===0;
       if(sEmpty(next) && !sEmpty(state)){
         try{ await cloudSaveState(state); }catch(_e){}
         if(typeof toast === 'function') toast('云端数据为空，已用本地数据恢复');
+      } else if(!sEmpty(next) && !sEmpty(state) && JSON.stringify(next) !== JSON.stringify(state)){
+        const choice = await showConflictDialog(cloud.updated_at);
+        if(choice === 'cloud'){
+          state = next;
+          try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); }catch(_e){}
+          if(typeof setupFilter === 'function') setupFilter();
+          if(typeof render === 'function') render();
+          if(typeof updateAccountBar === 'function') updateAccountBar();
+          if(typeof toast === 'function') toast('已采用云端版本');
+        } else {
+          try{ await cloudSaveState(state); }catch(_e){}
+          if(typeof toast === 'function') toast('已采用本机版本并同步到云端');
+        }
       } else {
         state = next;
         try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); }catch(_e){}
@@ -1889,6 +1932,7 @@ function persist(){
 }
 function commitState(next){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  try{ localStorage.setItem('wb_local_updated', new Date().toISOString()); }catch(_e){}
   state = next;
   storageLoadError = '';
   scheduleCloudSave();
