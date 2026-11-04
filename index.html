@@ -1578,6 +1578,14 @@ function mergeWritings(A, B){
   }
   return out;
 }
+/* 删除墓碑：记录被删条目的唯一 key，随 state 上云；所有设备合并时统一剔除，实现"删了别复活" */
+function markDeleted(kind, obj){
+  if(!Array.isArray(state._del)) state._del = [];
+  let key = null;
+  if(obj && obj.id !== undefined && obj.id !== null) key = kind + ':id:' + obj.id;
+  else if(obj && obj.slot !== undefined && obj.slot !== null) key = kind + ':slot:' + obj.slot;
+  if(key && !state._del.includes(key)) state._del.push(key);
+}
 function mergeState(a, b){
   const listKeys = ['books','cases','tips','snippets','topics','clients','reviews','materials','todos','publicReads','legacyPublicReads','writings'];
   const out = {};
@@ -1587,18 +1595,31 @@ function mergeState(a, b){
     if(x.slot !== undefined && x.slot !== null) return 'slot:' + x.slot;
     try{ return 'j:' + JSON.stringify(x); }catch(_e){ return '_null_'; }
   };
+  /* 删除墓碑：合并云端与本地已删标记，并在合并结果中剔除它们，使删除在所有设备一致生效 */
+  const del = new Set();
+  (Array.isArray(a._del) ? a._del : []).forEach(d => del.add(d));
+  (Array.isArray(b._del) ? b._del : []).forEach(d => del.add(d));
   for(const k of listKeys){
-    if(k === 'writings'){ out.writings = mergeWritings(a.writings, b.writings); continue; }
+    if(k === 'writings'){
+      const A = Array.isArray(a.writings) ? a.writings : [];
+      const B = Array.isArray(b.writings) ? b.writings : [];
+      const fa = A.filter(w => w && w.id != null && !del.has('writings:id:' + w.id));
+      const fb = B.filter(w => w && w.id != null && !del.has('writings:id:' + w.id));
+      const mw = mergeWritings(fa, fb) || [];
+      out.writings = mw.map(w => ({ ...w, chapters: (w.chapters||[]).filter(c => c && c.id != null && !del.has('writings.c:id:' + c.id)) }));
+      continue;
+    }
     const A = Array.isArray(a[k]) ? a[k] : [];
     const B = Array.isArray(b[k]) ? b[k] : [];
     const map = {};
-    for(const x of B) map[keyOf(x)] = x;           // 本地优先
-    for(const x of A) if(!(keyOf(x) in map)) map[keyOf(x)] = x;  // 云端补充
+    for(const x of B){ const kk = keyOf(x); if(!del.has(k + ':' + kk)) map[kk] = x; }
+    for(const x of A){ const kk = keyOf(x); if(!del.has(k + ':' + kk) && !(kk in map)) map[kk] = x; }
     out[k] = Object.keys(map).map(ik => map[ik]);
   }
   out.caseSeq = Math.max(Number(a.caseSeq)||0, Number(b.caseSeq)||0);
   out.schemaVersion = Math.max(Number(a.schemaVersion)||0, Number(b.schemaVersion)||0, 2);
   out.profile = (b.profile && Object.keys(b.profile).length) ? b.profile : (a.profile || {});
+  out._del = [...del];
   for(const k of Object.keys(a)){ if(!(k in out) && a[k] !== undefined) out[k] = a[k]; }
   for(const k of Object.keys(b)){ if(!(k in out) && b[k] !== undefined) out[k] = b[k]; }
   return out;
@@ -2419,7 +2440,8 @@ function newChapter(){
 function deleteWriting(){
   const w = currentWriting(); if(!w) return;
   if(!confirm('确定删除当前章节？')) return;
-  w.chapters = (w.chapters||[]).filter(c => c.id !== currentChapterId);
+  const c = currentChapter(); if(c) markDeleted('writings.c', c);
+  w.chapters = (w.chapters||[]).filter(cc => cc.id !== currentChapterId);
   w.updated = new Date().toISOString();
   currentChapterId = (w.chapters && w.chapters.length) ? w.chapters[0].id : null;
   commitState(state);
@@ -2438,6 +2460,7 @@ function renameWriting(){
 function deleteDoc(){
   const w = currentWriting(); if(!w) return;
   if(!confirm('确定删除作品「' + (w.title || '未命名作品') + '」及其所有章节？\n此操作会同步到所有登录设备。')) return;
+  markDeleted('writings', w);
   state.writings = (state.writings || []).filter(x => x.id !== w.id);
   currentWritingId = null; currentChapterId = null;
   ensureWritingDoc();
@@ -2881,6 +2904,7 @@ async function saveReview(){
   }catch(e){ toast('保存失败：' + e.message); }
 }
 function deleteReview(){
+  markDeleted('reviews', state.reviews.find(x => x.id === editingReview));
   const next = JSON.parse(JSON.stringify(state));
   const before = (next.reviews||[]).length;
   const victim = next.reviews.find(x => x.id === editingReview);
@@ -3882,10 +3906,12 @@ async function deleteCurrent(){
   const next=JSON.parse(JSON.stringify(state)), keys=[];
   if(editing.type==='book'){
     const old=state.books.find(x=>x.slot===editing.slot);
+    if(old) markDeleted('books', old);
     if(old?.file) keys.push(bookFileKey(old));
     next.books=next.books.filter(x=>x.slot!==editing.slot);
   }else{
     const old=state.cases.find(x=>x.id===editing.id);
+    if(old) markDeleted('cases', old);
     if(old) keys.push(...attachmentRefs({books:[],cases:[old]}).map(r=>r.key));
     next.cases=next.cases.filter(x=>x.id!==editing.id);
   }
@@ -4293,15 +4319,17 @@ document.addEventListener('click', e => {
   const delTopic = e.target.closest('[data-del-topic]');
   if(delTopic){
     if(!confirm('确定删除这个选题？关联的素材链接会保留。')) return;
+    markDeleted('topics', {id: delTopic.dataset.delTopic});
     state.topics = state.topics.filter(x => x.id !== delTopic.dataset.delTopic);
-    persist(); render(); toast('已删除'); return;
+    commitState(state); render(); toast('已删除'); return;
   }
   // 知识卡：删除（每日知识）
   const delTip = e.target.closest('[data-deltip]');
   if(delTip){
     if(!confirm('删除这条知识？')){ return; }
+    markDeleted('tips', {id: delTip.dataset.deltip});
     state.tips = state.tips.filter(x => x.id !== delTip.dataset.deltip);
-    persist(); render(); toast('已删除');
+    commitState(state); render(); toast('已删除');
     return;
   }
   // 随手记：展开 / 收起
@@ -4319,23 +4347,26 @@ document.addEventListener('click', e => {
   const delNote = e.target.closest('[data-delnote]');
   if(delNote){
     if(!confirm('确定删除这条随手记？')) return;
+    markDeleted('snippets', {id: delNote.dataset.delnote});
     state.snippets = state.snippets.filter(x => x.id !== delNote.dataset.delnote);
-    persist(); render(); toast('已删除');
+    commitState(state); render(); toast('已删除');
     return;
   }
   // 素材：删除
   const delMat = e.target.closest('[data-del-mat]');
   if(delMat){
     if(!confirm('确定删除这条素材？')) return;
+    markDeleted('materials', {id: delMat.dataset.delMat});
     state.materials = state.materials.filter(x => x.id !== delMat.dataset.delMat);
     state.topics.forEach(t => { if(Array.isArray(t.materials)) t.materials = t.materials.filter(m => m !== delMat.dataset.delMat); });
-    persist(); render(); toast('已删除'); return;
+    commitState(state); render(); toast('已删除'); return;
   }
   // 待办：删除
   const delTodo = e.target.closest('[data-del-todo]');
   if(delTodo){
+    markDeleted('todos', {id: delTodo.dataset.delTodo});
     state.todos = state.todos.filter(x => x.id !== delTodo.dataset.delTodo);
-    persist(); render(); return;
+    commitState(state); render(); return;
   }
 });
 $('#grid').addEventListener('click', e => {
@@ -4584,6 +4615,7 @@ $('#clCasesList').addEventListener('click', e => {
 $('#clDelete').addEventListener('click', () => {
   if(!editingClient) return;
   if(!confirm('确定删除这个客户吗？此操作不可撤销。')) return;
+  markDeleted('clients', {id: editingClient});
   const next = JSON.parse(JSON.stringify(state));
   const before = (next.clients||[]).length;
   next.clients = (next.clients||[]).filter(x => x.id !== editingClient);
