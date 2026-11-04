@@ -1538,6 +1538,43 @@ function showConflictDialog(cloudUpdatedAt){
   });
 }
 /* 自动合并云端与本地数据（按条目去重，各端新增都保留，同 id 以本地为准） */
+/* 写作作品合并：同一作品(id)时，章节按 id 取并集（云端新章节不被本地旧缓存覆盖），
+   本地与云端各自独有的作品都保留；同章节 id 取更新/内容非空者。 */
+function mergeWritings(A, B){
+  const aArr = Array.isArray(A) ? A : [];
+  const bArr = Array.isArray(B) ? B : [];
+  const byId = {};
+  for(const w of aArr){ if(w && w.id != null){ if(byId[w.id]) byId[w.id].cloud = w; else byId[w.id] = {cloud:w}; } }
+  for(const w of bArr){
+    if(w && w.id != null){
+      if(byId[w.id]) byId[w.id].loc = w;
+      else byId[w.id] = {loc:w};
+    }
+  }
+  const out = [];
+  for(const id in byId){
+    const {cloud, loc} = byId[id];
+    if(cloud && loc){
+      const cm = {};
+      for(const c of (cloud.chapters||[])){ if(c && c.id != null) cm[c.id] = c; }
+      for(const c of (loc.chapters||[])){
+        if(c && c.id != null){
+          if(cm[c.id]){ cm[c.id] = ((c.updated||'') >= (cm[c.id].updated||'')) ? c : cm[c.id]; }
+          else cm[c.id] = c;
+        }
+      }
+      const merged = { ...loc, ...cloud, chapters: Object.values(cm) };
+      merged.title = loc.title || cloud.title || '未命名作品';
+      merged.updated = ((loc.updated||'') >= (cloud.updated||'')) ? loc.updated : cloud.updated;
+      out.push(merged);
+    } else if(loc){
+      out.push(loc);
+    } else if(cloud){
+      out.push(cloud);
+    }
+  }
+  return out;
+}
 function mergeState(a, b){
   const listKeys = ['books','cases','tips','snippets','topics','clients','reviews','materials','todos','publicReads','legacyPublicReads','writings'];
   const out = {};
@@ -1548,6 +1585,7 @@ function mergeState(a, b){
     try{ return 'j:' + JSON.stringify(x); }catch(_e){ return '_null_'; }
   };
   for(const k of listKeys){
+    if(k === 'writings'){ out.writings = mergeWritings(a.writings, b.writings); continue; }
     const A = Array.isArray(a[k]) ? a[k] : [];
     const B = Array.isArray(b[k]) ? b[k] : [];
     const map = {};
@@ -1566,6 +1604,13 @@ function mergeState(a, b){
 async function syncFromCloud(){
   if(!SB.enabled) return;
   try{
+    /* reset=1：清空本地缓存，强制以云端为准重建（用于端上出现本地旧缓存覆盖云端时） */
+    if(typeof location !== 'undefined' && new URLSearchParams(location.search).has('reset')){
+      try{ localStorage.removeItem(STORAGE_KEY); }catch(_e){}
+      try{ localStorage.removeItem('wb_local_updated'); }catch(_e){}
+      state = {};
+      if(typeof toast === 'function') toast('已清除本地缓存，正在从云端重建');
+    }
     const cloud = await cloudLoadState();
     if(cloud){
       const next = normalizeState(cloud.data);
