@@ -7088,6 +7088,8 @@ textarea.ta-grow{
 <script id="insights-js" data-wb="insights">
 /* 数据统计 + 分模块导出（独立模块，不改原始渲染逻辑） */
 (function () {
+  var VLABEL = { accurate: '准', partial: '部分准', miss: '不准', none: '待验证' };
+  function vLabel(v) { var x = String(v == null ? '' : v).trim(); return VLABEL[x] || x; }
   'use strict';
   var LS = 'reading_case_workbench_v1';
 
@@ -7115,7 +7117,7 @@ textarea.ta-grow{
   function addDays(base, n) { var d = new Date(base.getTime()); d.setDate(d.getDate() + n); return d; }
 
   var MODULES = [
-    { k: 'cases', n: '案例', icon: '🎴', csv: true, pick: function (c) { return { 记录ID: c.id || '', 编号: c.no, 日期: c.date, 标题: c.title, 类型: c.type, 领域: c.domain, 选题: c.topic, 客户: c.client, 判定: c.verdict, 牌阵: c.spread, 问题: c.question, 解读: c.result, 复盘: c.review, 反馈: c.feedback, 回访日: c.visitAt, 回访备注: c.visitNote }; } },
+    { k: 'cases', n: '案例', icon: '🎴', csv: true, pick: function (c) { return { 记录ID: c.id || '', 编号: c.no, 日期: c.date, 标题: c.title, 类型: c.type, 领域: c.domain, 选题: c.topic, 客户: c.client, 判定: vLabel(c.verdict), 判定原值: c.verdict, 牌阵: c.spread, 问题: c.question, 解读: c.result, 复盘: c.review, 反馈: c.feedback, 回访日: c.visitAt, 回访备注: c.visitNote }; } },
     { k: 'clients', n: '客户', icon: '👤', csv: true, pick: function (c) { return { 记录ID: c.id || '', 姓名: c.name, 性别: c.gender, 生日: c.birth, 年龄: c.age, 星座: c.zodiac, 电话: c.phone, 微信: c.wechat, 备注: c.note }; } },
     { k: 'books', n: '书单', icon: '📚', filter: function (b) { return !!b.title; } },
     { k: 'tips', n: '每日知识', icon: '✦' },
@@ -7191,11 +7193,11 @@ textarea.ta-grow{
     var clients = arr(s, 'clients');
     var thisMonth = todayStr().slice(0, 7);
     var monthCount = cases.filter(function (c) { return String(c.date || '').slice(0, 7) === thisMonth; }).length;
-    var pending = cases.filter(function (c) { return (c.verdict || '') === '待验证'; }).length;
+    var pending = cases.filter(function (c) { return !c.verdict || c.verdict === 'none'; }).length;
     var n = cases.length;
 
     var domainRows = countBy(cases, function (c) { return c.domain; });
-    var verdictRows = countBy(cases, function (c) { return c.verdict; });
+    var verdictRows = countBy(cases, function (c) { return vLabel(c.verdict); });
 
     // 近 6 个月
     var base = new Date();
@@ -7248,7 +7250,7 @@ textarea.ta-grow{
           : '<div class="wbm-empty">这 7 天没有安排回访</div>') + '</div>' +
         '<div class="wbm-sec"><h3>最近记录</h3>' + (recent.length
           ? '<div class="wbm-list">' + recent.map(function (c) {
-              return '<div class="row"><span class="d">' + esc(c.date || '') + '</span><span class="t">' + esc(c.client || '') + ' · ' + esc(c.title || '') + '</span><span class="d">' + esc(c.verdict || '') + '</span></div>';
+              return '<div class="row"><span class="d">' + esc(c.date || '') + '</span><span class="t">' + esc(c.client || '') + ' · ' + esc(c.title || '') + '</span><span class="d">' + esc(vLabel(c.verdict)) + '</span></div>';
             }).join('') + '</div>'
           : '<div class="wbm-empty">还没有案例</div>') + '</div>' +
       '</div>';
@@ -7361,6 +7363,10 @@ textarea.ta-grow{
   function toastIf(m) { try { if (typeof toast === 'function') toast(m); } catch (e) {} }
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
 
+  /* 判定值 → 中文（站点内部值：none/accurate/partial/miss） */
+  var VLABEL = { accurate: '准', partial: '部分准', miss: '不准', none: '待验证' };
+  function vLabel(v) { var s = String(v == null ? '' : v).trim(); return VLABEL[s] || s; }
+
   /* ---------------- Ctrl+Z 撤销 ---------------- */
   var undoStack = [];
   var undoing = false;
@@ -7467,6 +7473,7 @@ textarea.ta-grow{
     }
     var inp = document.getElementById('wbTagsInput');
     if (inp) inp.value = cl && Array.isArray(cl.tags) ? cl.tags.join(', ') : '';
+    ensureClientTimeline();
   }
 
   var openOrig = window.openClientEditor;
@@ -7475,7 +7482,7 @@ textarea.ta-grow{
       curClientId = id || null;
       var r = openOrig.apply(this, arguments);
       ensureTagUI();
-      setTimeout(ensureTagUI, 50);
+      setTimeout(function () { ensureTagUI(); ensureClientTimeline(); }, 60);
       return r;
     };
   }
@@ -7556,7 +7563,7 @@ textarea.ta-grow{
         return String(c.client || '').toLowerCase().indexOf(q) >= 0 ||
           String(c.title || '').toLowerCase().indexOf(q) >= 0 ||
           String(c.domain || '').toLowerCase().indexOf(q) >= 0 ||
-          String(c.verdict || '').toLowerCase().indexOf(q) >= 0;
+          vLabel(c.verdict).toLowerCase().indexOf(q) >= 0;
       });
     }
     if (!cases.length) return '<div class="wbm-empty">没有匹配的咨询记录</div>';
@@ -7573,13 +7580,49 @@ textarea.ta-grow{
         out += '<div class="wb-tl-month">' + esc(mk === '未填日期' ? mk : mk.replace('-', ' 年 ') + ' 月') + '</div>';
         last = mk;
       }
-      var v = String(c.verdict || '');
-      out += '<div class="wb-tl-row"><span class="d">' + esc(d.slice(5) || '—') + '</span>' +
+      var lab = vLabel(c.verdict);
+      out += '<div class="wb-tl-row" data-goto-case="' + esc(c.id) + '" title="点击打开这条案例">' +
+        '<span class="d">' + esc(d.slice(5) || '—') + '</span>' +
         '<span class="t"><b>' + esc(c.client || '未填客户') + '</b> · ' + esc(c.title || '（无标题）') + '</span>' +
         '<span class="m">' + (c.domain ? '<span class="wb-tl-v">' + esc(c.domain) + '</span>' : '') +
-        (v ? '<span class="wb-tl-v ' + esc(v) + '">' + esc(v) + '</span>' : '') + '</span></div>';
+        '<span class="wb-tl-v ' + esc(lab) + '">' + esc(lab) + '</span></span></div>';
     });
     return out;
+  }
+
+  /* 客户弹窗里的「TA 的案例」改成同款时间线 */
+  function ensureClientTimeline() {
+    var list = document.getElementById('clCasesList');
+    if (!list) return;
+    var nmEl = document.getElementById('clName');
+    var nm = nmEl ? String(nmEl.value || '').trim() : '';
+    if (!nm) return;
+    var mine = (st().cases || []).filter(function (c) { return String(c.client || '').trim() === nm; });
+    if (!mine.length) {
+      list.innerHTML = '<div class="wbm-empty">还没有这个客户的咨询记录</div>';
+      return;
+    }
+    mine.sort(function (a, b) {
+      var x = String(a.date || ''), y = String(b.date || '');
+      if (x !== y) return y.localeCompare(x);
+      return (b.no || 0) - (a.no || 0);
+    });
+    var out = '', last = '';
+    mine.forEach(function (c) {
+      var d = String(c.date || '');
+      var mk = d.slice(0, 7) || '未填日期';
+      if (mk !== last) {
+        out += '<div class="wb-tl-month">' + esc(mk === '未填日期' ? mk : mk.replace('-', ' 年 ') + ' 月') + '</div>';
+        last = mk;
+      }
+      var lab = vLabel(c.verdict);
+      out += '<div class="wb-tl-row" data-goto-case="' + esc(c.id) + '" title="点击打开这条案例">' +
+        '<span class="d">' + esc(d.slice(5) || '—') + '</span>' +
+        '<span class="t"><b>' + esc(c.title || '（无标题）') + '</b></span>' +
+        '<span class="m">' + (c.domain ? '<span class="wb-tl-v">' + esc(c.domain) + '</span>' : '') +
+        '<span class="wb-tl-v ' + esc(lab) + '">' + esc(lab) + '</span></span></div>';
+    });
+    list.innerHTML = out;
   }
 
   function openTimeline() {
