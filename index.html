@@ -824,6 +824,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:44px;lette
 .writing-title::placeholder{color:var(--muted)}
 .writing-del{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:6px 12px;font-size:12.5px;cursor:pointer}
 .writing-del:hover{color:#d98a7a;border-color:#d98a7a}
+.writing-docbar .docbtn{flex:none;padding:6px 9px;font-size:12px}
 .writing-content{flex:1;width:100%;border:none;outline:none;background:transparent;color:var(--ink);font-size:15.5px;line-height:1.9;padding:18px 22px;resize:none;font-family:inherit}
 .writing-content::placeholder{color:var(--muted)}
 .writing-stat{border-top:1px solid var(--line);padding:9px 18px;font-size:12px;color:var(--muted);display:flex;gap:16px}
@@ -943,6 +944,8 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:44px;lette
         <div class="writing-docbar">
           <select id="writingDocSel" class="writing-docsel" title="切换作品"></select>
           <button class="writing-new writing-new2" id="btnAddWriting" title="新建文章">＋ 文章</button>
+          <button class="writing-del docbtn" id="btnRenameWriting" title="重命名当前作品">改名</button>
+          <button class="writing-del docbtn" id="btnDelDoc" title="删除当前作品">删除作品</button>
         </div>
         <div id="writingList" class="writing-list"></div>
       </div>
@@ -2423,6 +2426,29 @@ function deleteWriting(){
   if(currentChapterId) selectChapter(currentChapterId);
   else { $('#writingTitle').value=''; $('#writingContent').value=''; renderWritingList(); updateWritingStat(); }
 }
+function renameWriting(){
+  const w = currentWriting(); if(!w) return;
+  const t = prompt('作品标题：', w.title || '');
+  if(t === null) return;
+  w.title = (t||'').trim() || '未命名作品';
+  w.updated = new Date().toISOString();
+  commitState(state);
+  renderDocSel();
+}
+function deleteDoc(){
+  const w = currentWriting(); if(!w) return;
+  if(!confirm('确定删除作品「' + (w.title || '未命名作品') + '」及其所有章节？\n此操作会同步到所有登录设备。')) return;
+  state.writings = (state.writings || []).filter(x => x.id !== w.id);
+  currentWritingId = null; currentChapterId = null;
+  ensureWritingDoc();
+  commitState(state);
+  renderDocSel(); renderWritingList();
+  const nw = currentWriting();
+  if(nw){
+    currentChapterId = (nw.chapters && nw.chapters.length) ? nw.chapters[0].id : null;
+    if(currentChapterId) selectChapter(currentChapterId);
+  } else { $('#writingTitle').value=''; $('#writingContent').value=''; updateWritingStat(); }
+}
 function updateWritingStat(){
   const c = writingCounts($('#writingContent').value);
   $('#writingStat').textContent = '字数 ' + c.words + ' · 段落 ' + c.paras + ' · 字符 ' + c.chars;
@@ -2431,6 +2457,8 @@ function bindWriting(){
   $('#btnAddWriting').onclick = newWriting;
   $('#btnAddChapter').onclick = newChapter;
   $('#btnDelWriting').onclick = deleteWriting;
+  $('#btnRenameWriting').onclick = renameWriting;
+  $('#btnDelDoc').onclick = deleteDoc;
   $('#writingDocSel').addEventListener('change', () => { switchWriting($('#writingDocSel').value); });
   $('#writingTitle').addEventListener('input', () => {
     const c = currentChapter(); if(!c) return;
