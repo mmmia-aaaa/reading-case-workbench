@@ -161,6 +161,15 @@ input:disabled{background:#241B16;color:var(--muted)}
 .bauthor{font-size:12px;color:var(--muted);margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rv-case{color:var(--green);cursor:pointer;text-decoration:underline}
 .rv-case:hover{opacity:.8}
+/* 回收站 */
+.trash-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;grid-column:1/-1;margin-bottom:4px}
+.trash-row{min-height:0;cursor:default;flex-direction:row;align-items:center;justify-content:space-between;gap:10px;grid-column:1/-1}
+.trash-row:hover{transform:none}
+.trash-info{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}
+.trash-kind{font-size:11px;background:var(--green-soft);color:var(--green);border-radius:5px;padding:2px 7px;flex:none}
+.trash-title{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%}
+.trash-days{font-size:11px;color:var(--muted)}
+.trash-actions{display:flex;gap:6px;flex:none}
 .rv-missing{color:var(--muted)}
 .rv-content{margin:8px 0 2px;font-size:13px;line-height:1.7;color:var(--fg);white-space:pre-wrap;overflow-wrap:anywhere}
 .rv-content.rv-collapsed{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
@@ -880,6 +889,9 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:44px;lette
       <button class="nav-item" data-tab="writing">
         <span class="nav-icon">🖋</span>写作
       </button>
+      <button class="nav-item" data-tab="trash">
+        <span class="nav-icon">🗑</span>回收站
+      </button>
     </nav>
 
     <div class="sidebar-actions" data-page-node-id="wtnav-actions-001">
@@ -1586,6 +1598,18 @@ function markDeleted(kind, obj){
   else if(obj && obj.slot !== undefined && obj.slot !== null) key = kind + ':slot:' + obj.slot;
   if(key && !state._del.includes(key)) state._del.push(key);
 }
+/* 回收站：删除的条目先进回收站（保留 7 天），可恢复；回收站同时作为跨设备删除传播介质 */
+function pushToTrash(kind, data){
+  if(!Array.isArray(state.trash)) state.trash = [];
+  let key = null;
+  if(data && data.id !== undefined && data.id !== null) key = 'id:' + data.id;
+  else if(data && data.slot !== undefined && data.slot !== null) key = 'slot:' + data.slot;
+  if(key == null) return;
+  const entry = {kind, key, deletedAt: new Date().toISOString(), data};
+  const idx = state.trash.findIndex(t => t.kind === kind && t.key === key);
+  if(idx >= 0) state.trash[idx] = entry; else state.trash.push(entry);
+}
+function trashKeyOf(t){ return (t && t.kind && t.key) ? (t.kind + ':' + t.key) : null; }
 function mergeState(a, b){
   const listKeys = ['books','cases','tips','snippets','topics','clients','reviews','materials','todos','publicReads','legacyPublicReads','writings','tipCats','caseDomains','caseTopics'];
   const out = {};
@@ -1599,27 +1623,37 @@ function mergeState(a, b){
   const del = new Set();
   (Array.isArray(a._del) ? a._del : []).forEach(d => del.add(d));
   (Array.isArray(b._del) ? b._del : []).forEach(d => del.add(d));
+  /* 回收站：并集合并；列表剔除回收站中的条目（回收站兼作删除传播，且可恢复） */
+  const trashMap = {};
+  [].concat(a.trash || [], b.trash || []).forEach(t => {
+    const kk = trashKeyOf(t);
+    if(kk){
+      if(!(kk in trashMap) || String(t.deletedAt || '') > String(trashMap[kk].deletedAt || '')) trashMap[kk] = t;
+    }
+  });
+  const trashSet = new Set(Object.keys(trashMap));
   for(const k of listKeys){
     if(k === 'writings'){
       const A = Array.isArray(a.writings) ? a.writings : [];
       const B = Array.isArray(b.writings) ? b.writings : [];
-      const fa = A.filter(w => w && w.id != null && !del.has('writings:id:' + w.id));
-      const fb = B.filter(w => w && w.id != null && !del.has('writings:id:' + w.id));
+      const fa = A.filter(w => w && w.id != null && !del.has('writings:id:' + w.id) && !trashSet.has('writings:id:' + w.id));
+      const fb = B.filter(w => w && w.id != null && !del.has('writings:id:' + w.id) && !trashSet.has('writings:id:' + w.id));
       const mw = mergeWritings(fa, fb) || [];
-      out.writings = mw.map(w => ({ ...w, chapters: (w.chapters||[]).filter(c => c && c.id != null && !del.has('writings.c:id:' + c.id)) }));
+      out.writings = mw.map(w => ({ ...w, chapters: (w.chapters||[]).filter(c => c && c.id != null && !del.has('writings.c:id:' + c.id) && !trashSet.has('writings.c:id:' + c.id)) }));
       continue;
     }
     const A = Array.isArray(a[k]) ? a[k] : [];
     const B = Array.isArray(b[k]) ? b[k] : [];
     const map = {};
-    for(const x of B){ const kk = keyOf(x); if(!del.has(k + ':' + kk)) map[kk] = x; }
-    for(const x of A){ const kk = keyOf(x); if(!del.has(k + ':' + kk) && !(kk in map)) map[kk] = x; }
+    for(const x of B){ const kk = keyOf(x); const tk = k + ':' + kk; if(!del.has(tk) && !trashSet.has(tk)) map[kk] = x; }
+    for(const x of A){ const kk = keyOf(x); const tk = k + ':' + kk; if(!del.has(tk) && !trashSet.has(tk) && !(kk in map)) map[kk] = x; }
     out[k] = Object.keys(map).map(ik => map[ik]);
   }
   out.caseSeq = Math.max(Number(a.caseSeq)||0, Number(b.caseSeq)||0);
   out.schemaVersion = Math.max(Number(a.schemaVersion)||0, Number(b.schemaVersion)||0, 2);
   out.profile = (b.profile && Object.keys(b.profile).length) ? b.profile : (a.profile || {});
   out._del = [...del];
+  out.trash = Object.keys(trashMap).map(kk => trashMap[kk]);
   for(const k of Object.keys(a)){ if(!(k in out) && a[k] !== undefined) out[k] = a[k]; }
   for(const k of Object.keys(b)){ if(!(k in out) && b[k] !== undefined) out[k] = b[k]; }
   return out;
@@ -1663,6 +1697,7 @@ async function syncFromCloud(){
         if(typeof toast === 'function') toast('已从云端同步');
       }
     }
+    await purgeExpiredTrash();
     startCloudPolling();
   }catch(e){
     if(typeof toast === 'function') toast('云端同步失败：' + e.message);
@@ -2265,6 +2300,7 @@ async function renderCaseImgBlocks(c, isNew){
 
 /* ---------- 主列表渲染 ---------- */
 function render(){
+  if(currentTab === 'trash'){ renderTrash(); return; }
   if(currentTab === 'writing'){
     $('#grid').hidden = true;
     $('#writingPanel').hidden = false;
@@ -2368,6 +2404,157 @@ function renderDocSel(){
   sel.innerHTML = '<option value="">＋ 新建文章</option>' +
     (state.writings||[]).map(w => '<option value="' + esc(w.id) + '"' + (w.id===currentWritingId?' selected':'') + '>' + esc(w.title || '未命名作品') + '</option>').join('');
 }
+/* ===== 回收站：删除的条目保留 7 天，可恢复；超期自动彻底删除 ===== */
+function trashDaysLeft(t){
+  if(!t || !t.deletedAt) return 7;
+  const left = 7 - (Date.now() - new Date(t.deletedAt).getTime()) / 86400000;
+  return Math.max(0, Math.ceil(left));
+}
+function trashKindLabel(kind){
+  const map = { books:'书籍', cases:'案例', tips:'每日知识', snippets:'随手记', topics:'选题', materials:'素材', todos:'待办', clients:'客户', reviews:'复盘', 'writings':'写作', 'writings.c':'写作章节' };
+  return map[kind] || kind;
+}
+function trashTitle(t){
+  const d = (t && t.data) || {};
+  if(t.kind === 'books') return d.title || ('第' + d.slot + '本');
+  if(t.kind === 'cases') return d.title || ('案例 #' + d.id);
+  if(t.kind === 'reviews') return d.title || '复盘';
+  if(t.kind === 'clients') return d.name || '客户';
+  if(t.kind === 'writings') return d.title || '未命名作品';
+  if(t.kind === 'writings.c') return d.title || '章节';
+  if(t.kind === 'tips') return (d.text || '').slice(0, 20) || '知识';
+  if(t.kind === 'snippets') return (d.text || '').slice(0, 20) || '随手记';
+  if(t.kind === 'materials') return d.name || d.content || '素材';
+  if(t.kind === 'todos') return d.text || '待办';
+  if(t.kind === 'topics') return d.name || d.text || '选题';
+  return '';
+}
+function renderTrash(){
+  $('#grid').hidden = false;
+  $('#writingPanel').hidden = true;
+  $('#statLine').textContent = '回收站 · 保留 7 天，超期自动彻底删除 · 共 ' + (state.trash || []).length + ' 项';
+  const list = state.trash || [];
+  if(!list.length){
+    $('#grid').innerHTML = '<div class="empty-tip">回收站是空的。删除的书籍、案例、随手记、素材、选题、知识、待办、客户、复盘、写作都会先进这里保留 7 天，可随时恢复。</div>';
+    return;
+  }
+  let html = '<div class="trash-bar"><button class="btn small" data-trashact="empty">清空回收站</button><span style="color:var(--muted);font-size:11px">超期未恢复的会自动彻底删除</span></div>';
+  html += list.map((t, i) => {
+    const days = trashDaysLeft(t);
+    return `<div class="slot trash-row">
+      <div class="trash-info">
+        <span class="trash-kind">${esc(trashKindLabel(t.kind))}</span>
+        <span class="trash-title">${esc(trashTitle(t))}</span>
+        <span class="trash-days">还剩 ${days} 天</span>
+      </div>
+      <div class="trash-actions">
+        <button class="btn small" data-trashact="restore" data-tridx="${i}">恢复</button>
+        <button class="btn small" data-trashact="purge" data-tridx="${i}" style="color:#e06c75">彻底删除</button>
+      </div>
+    </div>`;
+  }).join('');
+  $('#grid').innerHTML = html;
+}
+function restoreFromTrash(idx){
+  const t = (state.trash || [])[idx];
+  if(!t){ toast('条目不存在'); return; }
+  const next = JSON.parse(JSON.stringify(state));
+  const target = (next.trash || [])[idx];
+  if(!target){ toast('条目不存在'); return; }
+  const data = target.data, kind = target.kind;
+  next.trash = next.trash.filter((x, i) => i !== idx);
+  if(kind === 'writings.c'){
+    const wid = data && data.writingId;
+    const w = (next.writings || []).find(x => x.id === wid);
+    if(w){
+      if(!Array.isArray(w.chapters)) w.chapters = [];
+      if(!w.chapters.some(c => c.id === data.id)) w.chapters.push(data);
+    }else{ toast('找不到所属作品，无法恢复'); return; }
+  }else{
+    if(!Array.isArray(next[kind])) next[kind] = [];
+    const dup = next[kind].some(x => (x.id != null && x.id === data.id) || (x.slot != null && x.slot === data.slot));
+    if(!dup) next[kind].push(data);
+    if(kind === 'books') next[kind].sort((a, b) => (a.slot || 0) - (b.slot || 0));
+  }
+  try{
+    if(storageLoadError) throw new Error('请先恢复本地存档');
+    commitState(next); render(); toast('已恢复，可正常使用');
+  }catch(e){ toast('恢复失败：' + e.message); }
+}
+function trashTombstoned(t, next){
+  if(!Array.isArray(next._del)) next._del = [];
+  let kk = null;
+  if(t.data && t.data.id != null) kk = t.kind + ':id:' + t.data.id;
+  else if(t.data && t.data.slot != null) kk = t.kind + ':slot:' + t.data.slot;
+  if(kk && !next._del.includes(kk)) next._del.push(kk);
+}
+function trashAttachmentKeys(t){
+  const keys = [];
+  if(t.kind === 'books'){ if(t.data && t.data.file) keys.push(bookFileKey(t.data)); }
+  else if(t.kind === 'cases'){ keys.push(...attachmentRefs({books: [], cases: [t.data]}).map(r => r.key)); }
+  else if(t.kind === 'reviews'){ (t.data && t.data.images || []).forEach(m => { if(m.storageKey) keys.push(m.storageKey); }); }
+  return keys;
+}
+async function purgeFromTrash(idx){
+  const t = (state.trash || [])[idx];
+  if(!t){ toast('条目不存在'); return; }
+  if(!confirm('彻底删除「' + trashTitle(t) + '」？不可撤销，其附件也会被清除。')) return;
+  const next = JSON.parse(JSON.stringify(state));
+  const target = (next.trash || [])[idx];
+  if(!target){ toast('条目不存在'); return; }
+  next.trash = next.trash.filter((x, i) => i !== idx);
+  trashTombstoned(target, next);
+  const keys = trashAttachmentKeys(target);
+  try{
+    if(storageLoadError) throw new Error('请先恢复本地存档');
+    commitState(next); render();
+    try{ await cleanupFiles(keys); toast('已彻底删除'); }catch(_e){ toast('已彻底删除（附件清理失败，可稍后重试）'); }
+  }catch(e){ toast('删除失败：' + e.message); }
+}
+async function emptyTrash(){
+  const n = (state.trash || []).length;
+  if(!n){ toast('回收站为空'); return; }
+  if(!confirm('清空回收站？将彻底删除全部 ' + n + ' 项，不可撤销。')) return;
+  const next = JSON.parse(JSON.stringify(state));
+  const keys = [];
+  (next.trash || []).forEach(t => { trashTombstoned(t, next); keys.push(...trashAttachmentKeys(t)); });
+  next.trash = [];
+  try{
+    if(storageLoadError) throw new Error('请先恢复本地存档');
+    commitState(next); render();
+    try{ await cleanupFiles(keys); toast('回收站已清空'); }catch(_e){ toast('回收站已清空（附件清理失败，可稍后重试）'); }
+  }catch(e){ toast('清空失败：' + e.message); }
+}
+/* 7 天到期自动彻底删除：页面打开/每次云端同步后触发 */
+async function purgeExpiredTrash(){
+  if(!state.trash || !state.trash.length) return;
+  const now = Date.now();
+  const expired = state.trash.filter(t => t.deletedAt && (now - new Date(t.deletedAt).getTime()) >= 7 * 86400000);
+  if(!expired.length) return;
+  const ex = new Set(expired.map(t => t.kind + ':' + t.key));
+  const next = JSON.parse(JSON.stringify(state));
+  const keys = [];
+  next.trash = (next.trash || []).filter(t => {
+    const tk = t.kind + ':' + t.key;
+    if(ex.has(tk)){ trashTombstoned(t, next); keys.push(...trashAttachmentKeys(t)); return false; }
+    return true;
+  });
+  try{
+    if(storageLoadError) throw new Error('请先恢复本地存档');
+    commitState(next);
+    try{ await cleanupFiles(keys); }catch(_e){}
+    if(typeof toast === 'function') toast('已自动清理 ' + expired.length + ' 条超过 7 天的回收站记录');
+    if(currentTab === 'trash') render();
+  }catch(_e){}
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-trashact]');
+  if(!b) return;
+  const act = b.dataset.trashact;
+  if(act === 'restore') restoreFromTrash(Number(b.dataset.tridx));
+  else if(act === 'purge') purgeFromTrash(Number(b.dataset.tridx));
+  else if(act === 'empty') emptyTrash();
+});
 function renderWritingList(){
   ensureWritingDoc();
   renderDocSel();
@@ -2440,7 +2627,7 @@ function newChapter(){
 function deleteWriting(){
   const w = currentWriting(); if(!w) return;
   if(!confirm('确定删除当前章节？')) return;
-  const c = currentChapter(); if(c) markDeleted('writings.c', c);
+  const c = currentChapter(); if(c){ const _cw = currentWriting(); pushToTrash('writings.c', { ...c, writingId: (_cw && _cw.id) || null }); }
   w.chapters = (w.chapters||[]).filter(cc => cc.id !== currentChapterId);
   w.updated = new Date().toISOString();
   currentChapterId = (w.chapters && w.chapters.length) ? w.chapters[0].id : null;
@@ -2459,8 +2646,8 @@ function renameWriting(){
 }
 function deleteDoc(){
   const w = currentWriting(); if(!w) return;
-  if(!confirm('确定删除作品「' + (w.title || '未命名作品') + '」及其所有章节？\n此操作会同步到所有登录设备。')) return;
-  markDeleted('writings', w);
+  if(!confirm('确定删除作品「' + (w.title || '未命名作品') + '」及其所有章节？\n删除后可在回收站中恢复，保留 7 天。')) return;
+  pushToTrash('writings', w);
   state.writings = (state.writings || []).filter(x => x.id !== w.id);
   currentWritingId = null; currentChapterId = null;
   ensureWritingDoc();
@@ -2938,14 +3125,18 @@ async function saveReview(){
   }catch(e){ toast('保存失败：' + e.message); }
 }
 function deleteReview(){
-  markDeleted('reviews', state.reviews.find(x => x.id === editingReview));
   const next = JSON.parse(JSON.stringify(state));
   const before = (next.reviews||[]).length;
   const victim = next.reviews.find(x => x.id === editingReview);
   next.reviews = (next.reviews||[]).filter(x => x.id !== editingReview);
   if(next.reviews.length === before){ toast('复盘不存在'); return; }
-  (victim?.images||[]).forEach(m => { if(m.storageKey){ try{ delFile(m.storageKey); }catch(_){} } });
-  commitState(next); closeReviewEditor(); render(); toast('复盘已删除');
+  /* 进回收站（保留 7 天），附件在彻底删除/到期清理时才删除 */
+  if(!Array.isArray(next.trash)) next.trash = [];
+  const key = 'id:' + victim.id;
+  const idx = next.trash.findIndex(t => t.kind === 'reviews' && t.key === key);
+  const entry = {kind:'reviews', key, deletedAt:new Date().toISOString(), data:victim};
+  if(idx >= 0) next.trash[idx] = entry; else next.trash.push(entry);
+  commitState(next); closeReviewEditor(); render(); toast('复盘已移入回收站，保留 7 天');
 }
 
 /* ---------- 客情维护 ---------- */
@@ -4012,25 +4203,33 @@ async function saveCurrent(){
 }
 async function deleteCurrent(){
   if(!editing || editorSaving) return;
-  if(!confirm('确定删除？删除后无法恢复（除非之前导出过完整备份）。')) return;
-  const next=JSON.parse(JSON.stringify(state)), keys=[];
+  if(!confirm('确定删除？删除后可在回收站中恢复，保留 7 天。')) return;
+  const next=JSON.parse(JSON.stringify(state));
+  if(!Array.isArray(next.trash)) next.trash=[];
   if(editing.type==='book'){
     const old=state.books.find(x=>x.slot===editing.slot);
-    if(old) markDeleted('books', old);
-    if(old?.file) keys.push(bookFileKey(old));
+    if(old){
+      const key='slot:'+old.slot;
+      const idx=next.trash.findIndex(t=>t.kind==='books'&&t.key===key);
+      const entry={kind:'books',key,deletedAt:new Date().toISOString(),data:old};
+      if(idx>=0) next.trash[idx]=entry; else next.trash.push(entry);
+    }
     next.books=next.books.filter(x=>x.slot!==editing.slot);
   }else{
     const old=state.cases.find(x=>x.id===editing.id);
-    if(old) markDeleted('cases', old);
-    if(old) keys.push(...attachmentRefs({books:[],cases:[old]}).map(r=>r.key));
+    if(old){
+      const key='id:'+old.id;
+      const idx=next.trash.findIndex(t=>t.kind==='cases'&&t.key===key);
+      const entry={kind:'cases',key,deletedAt:new Date().toISOString(),data:old};
+      if(idx>=0) next.trash[idx]=entry; else next.trash.push(entry);
+    }
     next.cases=next.cases.filter(x=>x.id!==editing.id);
   }
   setEditorBusy(true);
   try{
     if(storageLoadError) throw new Error('请先恢复本地存档');
     commitState(next); setEditorBusy(false); closeModal(true); render();
-    try{ await cleanupFiles(keys); toast('已删除'); }
-    catch(e){ toast('记录已删除；附件清理失败，可稍后重试'); }
+    toast('已移入回收站，保留 7 天');
   }catch(e){ toast('删除失败，原记录未更改：'+e.message); }
   finally{ if(editorSaving) setEditorBusy(false); }
 }
@@ -4429,17 +4628,17 @@ document.addEventListener('click', e => {
   const delTopic = e.target.closest('[data-del-topic]');
   if(delTopic){
     if(!confirm('确定删除这个选题？关联的素材链接会保留。')) return;
-    markDeleted('topics', {id: delTopic.dataset.delTopic});
+    pushToTrash('topics', {id: delTopic.dataset.delTopic});
     state.topics = state.topics.filter(x => x.id !== delTopic.dataset.delTopic);
-    commitState(state); render(); toast('已删除'); return;
+    commitState(state); render(); toast('已移入回收站，保留 7 天'); return;
   }
   // 知识卡：删除（每日知识）
   const delTip = e.target.closest('[data-deltip]');
   if(delTip){
     if(!confirm('删除这条知识？')){ return; }
-    markDeleted('tips', {id: delTip.dataset.deltip});
+    pushToTrash('tips', {id: delTip.dataset.deltip});
     state.tips = state.tips.filter(x => x.id !== delTip.dataset.deltip);
-    commitState(state); render(); toast('已删除');
+    commitState(state); render(); toast('已移入回收站，保留 7 天');
     return;
   }
   // 随手记：展开 / 收起
@@ -4457,24 +4656,24 @@ document.addEventListener('click', e => {
   const delNote = e.target.closest('[data-delnote]');
   if(delNote){
     if(!confirm('确定删除这条随手记？')) return;
-    markDeleted('snippets', {id: delNote.dataset.delnote});
+    pushToTrash('snippets', {id: delNote.dataset.delnote});
     state.snippets = state.snippets.filter(x => x.id !== delNote.dataset.delnote);
-    commitState(state); render(); toast('已删除');
+    commitState(state); render(); toast('已移入回收站，保留 7 天');
     return;
   }
   // 素材：删除
   const delMat = e.target.closest('[data-del-mat]');
   if(delMat){
     if(!confirm('确定删除这条素材？')) return;
-    markDeleted('materials', {id: delMat.dataset.delMat});
+    pushToTrash('materials', {id: delMat.dataset.delMat});
     state.materials = state.materials.filter(x => x.id !== delMat.dataset.delMat);
     state.topics.forEach(t => { if(Array.isArray(t.materials)) t.materials = t.materials.filter(m => m !== delMat.dataset.delMat); });
-    commitState(state); render(); toast('已删除'); return;
+    commitState(state); render(); toast('已移入回收站，保留 7 天'); return;
   }
   // 待办：删除
   const delTodo = e.target.closest('[data-del-todo]');
   if(delTodo){
-    markDeleted('todos', {id: delTodo.dataset.delTodo});
+    pushToTrash('todos', {id: delTodo.dataset.delTodo});
     state.todos = state.todos.filter(x => x.id !== delTodo.dataset.delTodo);
     commitState(state); render(); return;
   }
@@ -4724,15 +4923,22 @@ $('#clCasesList').addEventListener('click', e => {
 });
 $('#clDelete').addEventListener('click', () => {
   if(!editingClient) return;
-  if(!confirm('确定删除这个客户吗？此操作不可撤销。')) return;
-  markDeleted('clients', {id: editingClient});
+  if(!confirm('确定删除这个客户吗？删除后可在回收站中恢复，保留 7 天。')) return;
+  const victim = state.clients.find(x => x.id === editingClient);
   const next = JSON.parse(JSON.stringify(state));
   const before = (next.clients||[]).length;
   next.clients = (next.clients||[]).filter(x => x.id !== editingClient);
   if(next.clients.length === before){ toast('客户不存在'); return; }
+  if(victim){
+    if(!Array.isArray(next.trash)) next.trash=[];
+    const key='id:'+victim.id;
+    const idx=next.trash.findIndex(t=>t.kind==='clients'&&t.key===key);
+    const entry={kind:'clients',key,deletedAt:new Date().toISOString(),data:victim};
+    if(idx>=0) next.trash[idx]=entry; else next.trash.push(entry);
+  }
   try{
     if(storageLoadError) throw new Error('请先恢复本地存档');
-    commitState(next); closeClientEditor(); render(); toast('客户已删除');
+    commitState(next); closeClientEditor(); render(); toast('客户已移入回收站，保留 7 天');
   }catch(e){ toast('删除失败：' + e.message); }
 });
 
@@ -5657,6 +5863,12 @@ function normalizeState(d){
     s.caseTopics.forEach(x=>{ if(typeof x!=='object'||x===null||typeof x.domain!=='string'||typeof x.name!=='string'||!x.name.trim()) throw new Error('caseTopics 含无效选题'); });
     const tseen = new Set();
     s.caseTopics = s.caseTopics.filter(x => { const k = x.domain + '|' + x.name; if(tseen.has(k)) return false; tseen.add(k); return true; });
+  }
+  if(s.trash!==undefined){
+    array(s,'trash');
+    s.trash = s.trash.filter(t => t && typeof t === 'object' && typeof t.kind === 'string' && t.kind && typeof t.key === 'string' && t.key && typeof t.deletedAt === 'string' && t.data && typeof t.data === 'object');
+    const tseen = new Set();
+    s.trash = s.trash.filter(t => { const k = t.kind + ':' + t.key; if(tseen.has(k)) return false; tseen.add(k); return true; });
   }
   for(const key of ['cases','tips','snippets','topics','materials','todos','clients','reviews','writings']){
     s[key].forEach(x=>{x.id=String(x.id || uid());}); unique(s[key],'id');
