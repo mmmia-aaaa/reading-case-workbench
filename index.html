@@ -1039,7 +1039,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:44px;lette
           <select id="cType" data-page-node-id="6XfvAfR69smycYiKFICc53"><option data-page-node-id="BiQlCjJvbGIWmdASDqBUU7">塔罗</option><option>雷诺曼</option><option>马赛</option><option>八字</option><option>六爻</option><option data-page-node-id="IcxHMePr11cl3V6VuZQXsC">占星</option><option>七政</option><option>占星骰子</option><option>小六壬</option></select>
         </div>
         <div data-page-node-id="sClDuqSIvDdsHncNBpIBa7"><label data-page-node-id="4DLaqpDFcAYZFN6ikrkhew">领域</label>
-          <select id="cDomain" data-page-node-id="jWjoVlPBnU5hO5PRXJZ6d4"><option data-page-node-id="3qS8D1BE3sG2qPoBpygOf4">感情</option><option data-page-node-id="iZbNs5Bz3uF1Gnkplb7OWD">事业</option><option data-page-node-id="MdLvgxh3qSMowm3fqetZFW">财运</option><option data-page-node-id="VX3n9Hc7RhCwtyfQ3X3PjW">学业</option><option data-page-node-id="69raBNqXfe4BUs3KHMQHMJ">其他</option></select>
+          <select id="cDomain" data-page-node-id="jWjoVlPBnU5hO5PRXJZ6d4"></select>
         </div>
         <div data-page-node-id="dpIte0c9Dp9EpknNpEt7bm"><label data-page-node-id="ziZwkyIYKWeahuqUcHxpLB">选题细分</label><select id="cTopic" data-page-node-id="mCtCw1gitZZVt93KIBsAHF"></select></div>
       </div>
@@ -1587,7 +1587,7 @@ function markDeleted(kind, obj){
   if(key && !state._del.includes(key)) state._del.push(key);
 }
 function mergeState(a, b){
-  const listKeys = ['books','cases','tips','snippets','topics','clients','reviews','materials','todos','publicReads','legacyPublicReads','writings'];
+  const listKeys = ['books','cases','tips','snippets','topics','clients','reviews','materials','todos','publicReads','legacyPublicReads','writings','tipCats','caseDomains','caseTopics'];
   const out = {};
   const keyOf = x => {
     if(x == null) return '_null_';
@@ -2534,9 +2534,7 @@ function syncTopicFilter(domainF){
   const sel = $('#filterTopic');
   const cur = sel.value;
   const dom = (domainF && domainF !== '全部领域') ? domainF : null;
-  let topics = [];
-  if(dom){ topics = TOPICS[dom] || []; }
-  else{ topics = [...new Set(Object.values(TOPICS).flat())]; }
+  let topics = allCaseTopicsFor(dom);
   sel.innerHTML = '<option>全部选题</option>' + topics.map(t => `<option>${esc(t)}</option>`).join('');
   if(topics.includes(cur)) sel.value = cur;
 }
@@ -2779,16 +2777,24 @@ function handleReviewCatChange(){
   }catch(e){ toast('新建失败：' + e.message); fillReviewCatSelect(''); }
 }
 function closeReviewEditor(){ $('#reviewModal').hidden = true; editingReview = null; }
-// ===== 分类管理（复盘 / 书籍自定义分类）=====
+// ===== 分类管理（复盘 / 书籍 / 每日知识 / 案例领域 / 选题细分）=====
+function catCustomOf(next, kind){
+  if(kind === 'review') return next.reviewCats;
+  if(kind === 'book') return next.bookCats;
+  if(kind === 'tip') return next.tipCats;
+  if(kind === 'domain') return next.caseDomains;
+  return next.caseTopics; // topic
+}
 function openCatManager(kind){
-  $('#catModalTitle').textContent = kind === 'review' ? '管理复盘分类' : '管理书籍分类';
-  const custom = kind === 'review' ? (state.reviewCats||[]) : (state.bookCats||[]);
+  const TITLES = {review:'管理复盘分类', book:'管理书籍分类', tip:'管理每日知识分类', domain:'管理案例领域', topic:'管理选题细分'};
+  $('#catModalTitle').textContent = TITLES[kind] || '管理分类';
+  const custom = catCustomOf(state, kind) || [];
   let rows;
   if(!custom.length){
     rows = '<p style="color:var(--muted);margin:4px 0">还没有自定义分类，先去「新建分类」添加</p>';
   }else{
     rows = custom.map((x,i) => {
-      const name = kind === 'review' ? x : x.label;
+      const name = kind === 'book' ? x.label : (kind === 'topic' ? (x.domain + ' → ' + x.name) : x);
       return `<div class="catm-row"><span class="catm-name">${esc(name)}</span>
         <span class="catm-actions">
           <button class="btn small" data-catact="rename" data-catkind="${kind}" data-catidx="${i}">重命名</button>
@@ -2802,22 +2808,36 @@ function openCatManager(kind){
 function closeCatManager(){ $('#catModal').hidden = true; }
 function handleCatAct(act, kind, idx){
   const next = JSON.parse(JSON.stringify(state));
-  const custom = kind === 'review' ? next.reviewCats : next.bookCats;
+  const custom = catCustomOf(next, kind);
   if(!Array.isArray(custom)){ toast('没有可管理的分类'); return; }
   const item = custom[idx];
   if(item === undefined){ return; }
   if(act === 'rename'){
-    const newName = (prompt('新分类名称', kind === 'review' ? item : item.label) || '').trim();
+    const curName = kind === 'book' ? item.label : (kind === 'topic' ? item.name : item);
+    const newName = (prompt('新分类名称', curName) || '').trim();
     if(!newName){ return; }
     if(kind === 'review'){
       if(allReviewCats().some(x => x === newName && x !== item)){ toast('该分类已存在'); return; }
       const old = item; custom[idx] = newName;
       next.reviews.forEach(rv => { if(rv.cat === old) rv.cat = newName; });
-    }else{
+    }else if(kind === 'book'){
       if(BOOK_CATS.some(x => x.label === newName) || custom.some((x,i2) => i2 !== idx && x.label === newName)){ toast('该分类已存在'); return; }
       item.label = newName;
+    }else if(kind === 'tip'){
+      if(allTipCats().some(x => x === newName && x !== item)){ toast('该分类已存在'); return; }
+      const old = item; custom[idx] = newName;
+      next.tips.forEach(t => { if(t.cat === old) t.cat = newName; });
+    }else if(kind === 'domain'){
+      if(allDomains().some(x => x === newName && x !== item)){ toast('该领域已存在'); return; }
+      const old = item; custom[idx] = newName;
+      next.cases.forEach(c => { if(c.domain === old) c.domain = newName; });
+      (next.caseTopics||[]).forEach(t => { if(t.domain === old) t.domain = newName; });
+    }else{ // topic
+      const dom = item.domain;
+      if(allCaseTopicsFor(dom).some(x => x === newName && !(custom[idx] === item && x === item.name))){ toast('该选题已存在'); return; }
+      const oldName = item.name; item.name = newName;
+      next.cases.forEach(c => { if(c.domain === dom && c.topic === oldName) c.topic = newName; });
     }
-    if(kind === 'review') next.reviewCats = custom; else next.bookCats = custom;
     try{ if(storageLoadError) throw new Error('请先恢复本地存档'); commitState(next); toast('分类已重命名'); }
     catch(e){ toast('重命名失败：' + e.message); return; }
   }else if(act === 'del'){
@@ -2826,10 +2846,24 @@ function handleCatAct(act, kind, idx){
       const old = item; custom.splice(idx, 1);
       next.reviews.forEach(rv => { if(rv.cat === old) rv.cat = ''; });
       next.reviewCats = custom;
-    }else{
+    }else if(kind === 'book'){
       const key = item.key; custom.splice(idx, 1);
       next.books.forEach(b => { if(b.cat === key) b.cat = 'other'; });
       next.bookCats = custom;
+    }else if(kind === 'tip'){
+      const old = item; custom.splice(idx, 1);
+      next.tips.forEach(t => { if(t.cat === old) t.cat = '其他'; });
+      next.tipCats = custom;
+    }else if(kind === 'domain'){
+      const old = item; custom.splice(idx, 1);
+      next.cases.forEach(c => { if(c.domain === old) c.domain = '其他'; });
+      if(Array.isArray(next.caseTopics)) next.caseTopics = next.caseTopics.filter(t => t.domain !== old);
+      next.caseDomains = custom;
+    }else{ // topic
+      const dom = item.domain, oldName = item.name;
+      custom.splice(idx, 1);
+      next.cases.forEach(c => { if(c.domain === dom && c.topic === oldName) c.topic = ''; });
+      next.caseTopics = custom;
     }
     try{ if(storageLoadError) throw new Error('请先恢复本地存档'); commitState(next); toast('分类已删除'); }
     catch(e){ toast('删除失败：' + e.message); return; }
@@ -3132,6 +3166,32 @@ function setVisitOffset(offset){
   renderVisitInfo(null);
 }
 
+/* 每日知识分类：预设 + 自建（编辑下拉 / 筛选 / 新建 / 管理） */
+function allTipCats(){ return [...new Set([...TIP_CATS, ...(state.tipCats||[])])]; }
+function fillTipCatSelect(keep){
+  const sel = $('#tipCat');
+  if(!sel) return;
+  sel.innerHTML = allTipCats().map(c => `<option>${esc(c)}</option>`).join('')
+    + '<option value="__newtip__">＋ 新建分类…</option>'
+    + '<option value="__managetip__">管理分类…</option>';
+  if(keep && allTipCats().includes(keep)) sel.value = keep;
+}
+function handleTipCatChange(sel){
+  const v = sel.value;
+  if(v === '__newtip__'){
+    const name = (prompt('新分类名称') || '').trim();
+    if(!name){ fillTipCatSelect(); return; }
+    if(allTipCats().includes(name)){ toast('该分类已存在'); fillTipCatSelect(name); return; }
+    const next = JSON.parse(JSON.stringify(state));
+    if(!Array.isArray(next.tipCats)) next.tipCats = [];
+    next.tipCats.push(name);
+    try{ if(storageLoadError) throw new Error('请先恢复本地存档'); commitState(next); fillTipCatSelect(name); toast('分类已新建'); }
+    catch(e){ toast('新建失败：' + e.message); fillTipCatSelect(); }
+    return;
+  }
+  if(v === '__managetip__'){ openCatManager('tip'); fillTipCatSelect(); return; }
+}
+document.addEventListener('change', e => { const t = e.target; if(t && t.id === 'tipCat') handleTipCatChange(t); });
 function renderTips(q, f, active){
   let html = '';
   const t = todayTip();
@@ -3154,7 +3214,7 @@ function renderTips(q, f, active){
   html += `<div class="slot tip-add">
     <textarea id="tipText" rows="2" placeholder="记一条知识点：牌义、牌阵心得、占星知识、塔罗师纠正过的理解…"></textarea>
     <div class="tip-add-row">
-      <select id="tipCat">${TIP_CATS.map(c=>`<option>${c}</option>`).join('')}</select>
+      <select id="tipCat">${allTipCats().map(c=>`<option>${esc(c)}</option>`).join('')}<option value="__newtip__">＋ 新建分类…</option><option value="__managetip__">管理分类…</option></select>
       <input type="text" id="tipSource" placeholder="来源（可选，如：塔罗师案例课 03）">
       <button class="btn primary small" id="btnAddTip">＋ 收进知识库</button>
     </div>
@@ -3714,10 +3774,60 @@ function lookupCardByName(q){
 }
 
 /* ---------- 选题联动 ---------- */
+const CASE_DOMAINS = ['感情','事业','财运','学业','其他'];
+function allDomains(){ return [...new Set([...CASE_DOMAINS, ...(state.caseDomains||[])])]; }
+function fillDomainSelect(sel, keep){
+  if(!sel) return;
+  sel.innerHTML = allDomains().map(d => `<option>${esc(d)}</option>`).join('')
+    + '<option value="__newdomain__">＋ 新建领域…</option>'
+    + '<option value="__managedomain__">管理领域…</option>';
+  if(keep && allDomains().includes(keep)) sel.value = keep;
+}
+function allCaseTopicsFor(domain){
+  const presets = (domain ? (TOPICS[domain] || []) : [...new Set(Object.values(TOPICS).flat())]) || [];
+  const custom = (state.caseTopics||[]).filter(t => domain ? t.domain === domain : true).map(t => t.name);
+  return [...new Set([...presets, ...custom])];
+}
 function fillTopicSelect(selEl, domain, keep){
-  const list = TOPICS[domain] || TOPICS['其他'];
-  selEl.innerHTML = list.map(t => `<option>${esc(t)}</option>`).join('');
+  const list = allCaseTopicsFor(domain);
+  selEl.innerHTML = list.map(t => `<option>${esc(t)}</option>`).join('')
+    + '<option value="__newtopic__">＋ 新建选题…</option>'
+    + '<option value="__managetopic__">管理选题…</option>';
   if(list.includes(keep)) selEl.value = keep;
+}
+/* 案例领域 change：新建 / 管理 / 正常切换刷新选题 */
+function handleDomainChange(sel){
+  const v = sel.value;
+  if(v === '__newdomain__'){
+    const name = (prompt('新领域名称') || '').trim();
+    if(!name){ fillDomainSelect(sel); return; }
+    if(allDomains().includes(name)){ toast('该领域已存在'); fillDomainSelect(sel, name); return; }
+    const next = JSON.parse(JSON.stringify(state));
+    if(!Array.isArray(next.caseDomains)) next.caseDomains = [];
+    next.caseDomains.push(name);
+    try{ if(storageLoadError) throw new Error('请先恢复本地存档'); commitState(next); fillDomainSelect(sel, name); toast('领域已新建'); }
+    catch(e){ toast('新建失败：' + e.message); fillDomainSelect(sel); }
+    return;
+  }
+  if(v === '__managedomain__'){ openCatManager('domain'); fillDomainSelect(sel); return; }
+  fillTopicSelect($('#cTopic'), v, '');
+}
+/* 选题细分 change：新建 / 管理 */
+function handleTopicChange(sel){
+  const v = sel.value;
+  const dom = $('#cDomain').value;
+  if(v === '__newtopic__'){
+    const name = (prompt('新选题名称（属于「' + dom + '」领域）') || '').trim();
+    if(!name){ fillTopicSelect(sel, dom, ''); return; }
+    if(allCaseTopicsFor(dom).includes(name)){ toast('该选题已存在'); fillTopicSelect(sel, dom, name); return; }
+    const next = JSON.parse(JSON.stringify(state));
+    if(!Array.isArray(next.caseTopics)) next.caseTopics = [];
+    next.caseTopics.push({domain: dom, name});
+    try{ if(storageLoadError) throw new Error('请先恢复本地存档'); commitState(next); fillTopicSelect(sel, dom, name); toast('选题已新建'); }
+    catch(e){ toast('新建失败：' + e.message); fillTopicSelect(sel, dom, ''); }
+    return;
+  }
+  if(v === '__managetopic__'){ openCatManager('topic'); fillTopicSelect(sel, dom, ''); return; }
 }
 
 /* ---------- 编辑弹窗 ---------- */
@@ -3766,7 +3876,7 @@ function openCase(id){
   $('#bookForm').hidden = true; $('#caseForm').hidden = false;
   $('#cTitle').value = c?.title || '';
   $('#cType').value = c?.type || '塔罗';
-  $('#cDomain').value = c?.domain || '感情';
+  fillDomainSelect($('#cDomain'), c?.domain || '感情');
   fillTopicSelect($('#cTopic'), $('#cDomain').value, c?.topic || '');
   $('#cDate').value = c?.date || today();
   $('#cClient').value = c?.client || '';
@@ -4809,9 +4919,8 @@ function showImgLightbox(url, name){
 }
 
 /* 案例表单：选题随领域联动 */
-$('#cDomain').addEventListener('change', () => {
-  fillTopicSelect($('#cTopic'), $('#cDomain').value, '');
-});
+$('#cDomain').addEventListener('change', () => { handleDomainChange($('#cDomain')); });
+$('#cTopic').addEventListener('change', () => { handleTopicChange($('#cTopic')); });
 
 /* 牌阵编辑事件 */
 $('#spreadTpl').innerHTML = Object.entries(SPREADS).map(([k,v]) => `<option value="${k}">${v.name}</option>`).join('');
@@ -5533,6 +5642,22 @@ function normalizeState(d){
     const seen = new Set();
     s.bookCats = s.bookCats.filter(x => { if(seen.has(x.key)) return false; seen.add(x.key); return true; });
   }
+  if(s.tipCats!==undefined){
+    array(s,'tipCats');
+    s.tipCats.forEach(x=>{ if(typeof x!=='string'||!x.trim()) throw new Error('tipCats 含无效分类'); });
+    s.tipCats = Array.from(new Set(s.tipCats));
+  }
+  if(s.caseDomains!==undefined){
+    array(s,'caseDomains');
+    s.caseDomains.forEach(x=>{ if(typeof x!=='string'||!x.trim()) throw new Error('caseDomains 含无效领域'); });
+    s.caseDomains = Array.from(new Set(s.caseDomains));
+  }
+  if(s.caseTopics!==undefined){
+    array(s,'caseTopics');
+    s.caseTopics.forEach(x=>{ if(typeof x!=='object'||x===null||typeof x.domain!=='string'||typeof x.name!=='string'||!x.name.trim()) throw new Error('caseTopics 含无效选题'); });
+    const tseen = new Set();
+    s.caseTopics = s.caseTopics.filter(x => { const k = x.domain + '|' + x.name; if(tseen.has(k)) return false; tseen.add(k); return true; });
+  }
   for(const key of ['cases','tips','snippets','topics','materials','todos','clients','reviews','writings']){
     s[key].forEach(x=>{x.id=String(x.id || uid());}); unique(s[key],'id');
   }
@@ -5623,7 +5748,7 @@ function setupFilter(){
       '<optgroup label="通用细类">' + gnOpts + customOpts + '</optgroup>' +
       '<optgroup label="按状态"><option>想读</option><option>在读</option><option>读完</option></optgroup>';
   }else if(currentTab === 'cases'){
-    f.innerHTML = '<option>全部领域</option><option>感情</option><option>事业</option><option>财运</option><option>学业</option><option>其他</option>';
+    f.innerHTML = '<option>全部领域</option>' + allDomains().map(d => `<option>${esc(d)}</option>`).join('');
   }else if(currentTab === 'public'){
     const sub=state.pubTab || 'topics';
     let opts='<option value="全部内容">全部内容</option>';
@@ -5664,7 +5789,7 @@ function setupFilter(){
   }else if(currentTab === 'care'){
     f.innerHTML = '<option>全部客户</option>';
   }else{
-    f.innerHTML = '<option>全部分类</option>' + TIP_CATS.map(c => `<option>${c}</option>`).join('');
+    f.innerHTML = '<option>全部分类</option>' + allTipCats().map(c => `<option>${esc(c)}</option>`).join('');
   }
   $('#filterType').hidden = currentTab !== 'cases';
   $('#filterVerdict').hidden = currentTab !== 'cases';
