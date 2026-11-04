@@ -857,22 +857,41 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:44px;lette
   .writing-main{min-height:420px}
 }
 </style>
-<style id="ta-read">/* 长文本输入：为阅读与长内容录入优化 */
+<style id="ta-read">/* 长文本输入：为阅读与长内容录入优化（可收起/展开 + 随内容增高） */
 textarea.ta-grow{
-  min-height:112px;
+  min-height:100px;
   padding:12px 14px;
   font-size:15px !important;
   line-height:1.85 !important;
   border-radius:9px;
   resize:vertical;
   overflow-y:hidden;
+  transition:height .12s ease;
 }
 @media (max-width:640px){
-  textarea.ta-grow{min-height:128px;font-size:16px !important;line-height:1.9 !important;padding:12px 13px}
+  textarea.ta-grow{min-height:108px;font-size:16px !important;line-height:1.9 !important;padding:12px 13px}
 }
-.ta-hint{
+.ta-actions{
   float:right;
-  margin-left:8px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-left:10px;
+}
+.ta-toggle{
+  border:1px solid rgba(201,168,106,.45);
+  background:rgba(201,168,106,.10);
+  padding:1px 8px;
+  border-radius:999px;
+  cursor:pointer;
+  font-size:11.5px;
+  font-weight:400;
+  color:#c9a86a;
+  letter-spacing:.02em;
+  line-height:1.7;
+}
+.ta-toggle:hover{color:#e6c78d;background:rgba(201,168,106,.2)}
+.ta-hint{
   font-size:11.5px;
   font-weight:400;
   color:#8d7f6d;
@@ -6153,20 +6172,40 @@ if(storageLoadError){
   setTimeout(()=>{ if(currentTab==='books' && $('#modal').hidden && !state.books.length && !state.cases.length) toast('点任意空位收书，或用「导入书文件」批量导入 PDF / EPUB'); },700);
 }
 </script>
-<script id="ta-read-js">/* 长文本输入增强：自动增高 + 双击全屏编辑（不改变任何已有数据结构） */
+<script id="ta-read-js">/* 长文本输入增强：随内容增高 + 可收起/展开 + 双击全屏编辑（不改数据结构） */
 (function(){
   var SKIP = { writingContent: 1 };
+
   function isHelper(ta){
     return ta.style.position === 'fixed' || ta.style.opacity === '0' || ta.hidden;
+  }
+  function collapsedCap(){
+    return window.innerWidth <= 640 ? 190 : 210;
+  }
+  function capFor(ta){
+    if(ta.dataset.expanded === '1') return Math.round(window.innerHeight * 0.78);
+    return collapsedCap();
   }
   function grow(ta){
     if(!ta.classList.contains('ta-grow')) return;
     if(ta.offsetParent === null) return;
+    var cap = capFor(ta);
+    ta.style.overflowY = 'hidden';
     ta.style.height = 'auto';
-    var max = Math.round(window.innerHeight * 0.62);
-    var h = Math.min(ta.scrollHeight + 2, max);
+    var natural = ta.scrollHeight;
+    var h = Math.min(natural + 2, cap);
     ta.style.height = h + 'px';
-    ta.style.overflowY = (ta.scrollHeight > h + 2) ? 'auto' : 'hidden';
+    ta.style.overflowY = (natural > h + 2) ? 'auto' : 'hidden';
+    syncToggle(ta, natural);
+  }
+  function syncToggle(ta, natural){
+    var btn = ta._taToggle;
+    if(!btn) return;
+    var expanded = ta.dataset.expanded === '1';
+    var overflowing = natural > collapsedCap() + 2;
+    if(!overflowing && !expanded){ btn.hidden = true; return; }
+    btn.hidden = false;
+    btn.textContent = expanded ? '收起' : '展开全文';
   }
   function growAll(){
     var list = document.querySelectorAll('textarea.ta-grow');
@@ -6174,7 +6213,7 @@ if(storageLoadError){
   }
   function titleOf(ta){
     var p = ta.previousElementSibling;
-    if(p && p.tagName === 'LABEL') return p.textContent.replace('双击放大','').trim();
+    if(p && p.tagName === 'LABEL') return p.textContent.replace('双击放大','').replace('展开全文','').replace('收起','').trim();
     return '编辑';
   }
   function openFull(ta){
@@ -6213,23 +6252,58 @@ if(storageLoadError){
     document.addEventListener('keydown', onKey);
     setTimeout(function(){ big.focus(); try{ big.setSelectionRange(big.value.length, big.value.length); }catch(e){} }, 30);
   }
+  function addToggle(ta, label){
+    if(ta._taToggle) return;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ta-toggle';
+    btn.hidden = true;
+    btn.textContent = '展开全文';
+    btn.addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      ta.dataset.expanded = (ta.dataset.expanded === '1') ? '' : '1';
+      grow(ta);
+      if(ta.dataset.expanded === '1'){
+        setTimeout(function(){ ta.scrollIntoView({ block: 'nearest' }); }, 60);
+      }
+    });
+    var holder = label.querySelector('.ta-actions');
+    if(!holder){
+      holder = document.createElement('span');
+      holder.className = 'ta-actions';
+      label.appendChild(holder);
+    }
+    holder.insertBefore(btn, holder.firstChild);
+    ta._taToggle = btn;
+  }
   function enhance(ta){
     if(!ta || ta.tagName !== 'TEXTAREA') return;
     if(SKIP[ta.id] || ta.classList.contains('ta-grow') || isHelper(ta)) return;
     ta.classList.add('ta-grow');
-    if(Number(ta.getAttribute('rows')) < 4) ta.setAttribute('rows','4');
+    if(Number(ta.getAttribute('rows')) < 2) ta.setAttribute('rows','2');
     if(!ta.title) ta.title = '双击可全屏编辑';
     ta.addEventListener('input', function(){ grow(ta); });
     ta.addEventListener('focus', function(){ grow(ta); });
     ta.addEventListener('dblclick', function(e){ e.preventDefault(); openFull(ta); });
     var p = ta.previousElementSibling;
-    if(p && p.tagName === 'LABEL' && !p.querySelector('.ta-hint')){
-      var s = document.createElement('span');
-      s.className = 'ta-hint';
-      s.textContent = '双击放大';
-      p.appendChild(s);
+    if(p && p.tagName === 'LABEL'){
+      var holder = p.querySelector('.ta-actions');
+      if(!holder){
+        holder = document.createElement('span');
+        holder.className = 'ta-actions';
+        p.appendChild(holder);
+      }
+      if(!holder.querySelector('.ta-hint')){
+        var s = document.createElement('span');
+        s.className = 'ta-hint';
+        s.textContent = '双击放大';
+        holder.appendChild(s);
+      }
+      addToggle(ta, p);
     }
     grow(ta);
+    if(p && p.tagName === 'LABEL') syncToggle(ta, ta.scrollHeight);
   }
   function enhanceAll(){
     var list = document.querySelectorAll('textarea');
