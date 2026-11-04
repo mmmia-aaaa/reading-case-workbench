@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh-CN" data-page-node-id="eCufm4CRVxYNwTOHSxqmOI">
 <head data-page-node-id="xgVzCZ9ewpIqCbHLqWGaox">
+<meta name="wb-features" content="ta-read,insights,guide,quick-backup,tags,timeline,undo">
+<meta name="wb-build" content="p3-stats-export">
+
 <meta charset="UTF-8" data-page-node-id="KOAWv5wwiovU0SaVO66Q0d">
 <meta name="viewport" content="width=device-width, initial-scale=1" data-page-node-id="HCc4qb7HEnWhmkBTavB00L">
 <title>瑶的工作台 · 2026-11-04 · v2</title>
@@ -857,70 +860,93 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:44px;lette
   .writing-main{min-height:420px}
 }
 </style>
-<style id="ta-read">/* 长文本输入：为阅读与长内容录入优化（可收起/展开 + 随内容增高） */
-textarea.ta-grow{
-  min-height:100px;
-  padding:12px 14px;
-  font-size:15px !important;
-  line-height:1.85 !important;
-  border-radius:9px;
-  resize:vertical;
-  overflow-y:hidden;
-  transition:height .12s ease;
-}
+<style id="insights-css" data-wb="insights">
+/* 数据统计 / 分模块导出 —— 独立图层，不复用站点弹窗类，避免相互覆盖 */
+.wbm-mask{position:fixed;inset:0;background:rgba(10,8,6,.72);backdrop-filter:blur(3px);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px}
+.wbm{background:var(--card,#241E18);border:1px solid var(--line,#3a3128);border-radius:16px;width:100%;max-width:920px;max-height:86vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.55);overflow:hidden}
+.wbm-head{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line,#3a3128)}
+.wbm-head h2{margin:0;font-size:16px;letter-spacing:1px}
+.wbm-head .sub{font-size:12px;color:var(--muted,#9a8d7c);margin-left:2px}
+.wbm-x{margin-left:auto;background:transparent;border:0;color:var(--muted,#9a8d7c);font-size:20px;cursor:pointer;line-height:1;padding:4px 8px;border-radius:8px}
+.wbm-x:hover{background:rgba(255,255,255,.06);color:var(--text,#EDE3D6)}
+.wbm-body{padding:16px 20px 14px;overflow:auto}
+.wbm-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.wbm-card{background:rgba(255,255,255,.03);border:1px solid var(--line,#3a3128);border-radius:12px;padding:14px 16px}
+.wbm-card .n{font-size:26px;font-weight:700;color:var(--accent,#C79B6B);line-height:1.1}
+.wbm-card .l{font-size:12px;color:var(--muted,#9a8d7c);margin-top:6px;letter-spacing:.5px}
+.wbm-sec{margin-bottom:16px}
+.wbm-grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px 26px;align-items:start}
+.wbm-sec h3{font-size:13px;margin:0 0 10px;color:var(--text,#EDE3D6);letter-spacing:1px}
+.wbm-bar{display:grid;grid-template-columns:96px 1fr 46px;align-items:center;gap:10px;margin-bottom:7px;font-size:12.5px}
+.wbm-bar .name{color:var(--muted,#9a8d7c);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wbm-bar .track{display:block;height:10px;background:rgba(255,255,255,.05);border-radius:6px;overflow:hidden}
+.wbm-bar .fill{display:block;height:10px;background:linear-gradient(90deg,var(--accent,#C79B6B),#E3C79B);border-radius:6px;min-width:2px}
+.wbm-bar .v{text-align:right;color:var(--text,#EDE3D6)}
+.wbm-months{display:flex;align-items:flex-end;gap:10px;height:104px;padding-top:6px}
+.wbm-month{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}
+.wbm-month .col{width:100%;max-width:46px;background:linear-gradient(180deg,#E3C79B,var(--accent,#C79B6B));border-radius:6px 6px 0 0;min-height:3px}
+.wbm-month .k{font-size:11px;color:var(--muted,#9a8d7c)}
+.wbm-month .n{font-size:11px;color:var(--text,#EDE3D6)}
+.wbm-empty{font-size:13px;color:var(--muted,#9a8d7c);padding:10px 0}
+.wbm-list{font-size:13px;line-height:1.7}
+.wbm-list .row{display:flex;gap:10px;padding:5px 0;border-bottom:1px dashed var(--line,#3a3128)}
+.wbm-list .row:last-child{border-bottom:0}
+.wbm-list .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wbm-list .d{color:var(--muted,#9a8d7c);font-variant-numeric:tabular-nums}
+.wbm-table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+.wbm-table th{text-align:left;font-weight:600;color:var(--muted,#9a8d7c);font-size:12px;padding:8px 6px;border-bottom:1px solid var(--line,#3a3128)}.wbm-table th.c{text-align:right}.wbm-table th:nth-child(2){width:90px}.wbm-table th:nth-child(3){width:220px}.wbm-table td:nth-child(3){white-space:nowrap}
+.wbm-table td{padding:10px 6px;border-bottom:1px solid rgba(255,255,255,.05)}
+.wbm-table td.c{text-align:right;color:var(--muted,#9a8d7c);font-variant-numeric:tabular-nums}
+.wbm-table .acts{text-align:right;white-space:nowrap}
+.wbm-btn{background:rgba(255,255,255,.04);border:1px solid var(--line,#3a3128);color:var(--text,#EDE3D6);border-radius:8px;padding:6px 12px;font-size:12.5px;cursor:pointer;margin-left:6px}
+.wbm-btn:hover{background:rgba(199,155,107,.16);border-color:var(--accent,#C79B6B)}
+.wbm-btn.primary{background:var(--accent,#C79B6B);border-color:var(--accent,#C79B6B);color:#20180F;font-weight:600}
+.wbm-btn.primary:hover{filter:brightness(1.06)}
+.wbm-foot{display:flex;gap:8px;justify-content:flex-end;padding:12px 20px;border-top:1px solid var(--line,#3a3128)}
 @media (max-width:640px){
-  textarea.ta-grow{min-height:108px;font-size:16px !important;line-height:1.9 !important;padding:12px 13px}
+  .wbm-mask{padding:0;align-items:flex-end}
+  .wbm{max-width:100%;max-height:94vh;border-radius:16px 16px 0 0}
+  .wbm-grid2{grid-template-columns:1fr;gap:0}
+  .wbm-cards{grid-template-columns:repeat(2,1fr);gap:10px}
+  .wbm-body{padding:14px 14px 18px}
+  .wbm-bar{grid-template-columns:80px 1fr 40px}
+  .wbm-table{font-size:12px}
+  .wbm-table th:nth-child(2),.wbm-table td:nth-child(2){display:none}
+  .wbm-btn{padding:8px 10px}
 }
-.ta-actions{
-  float:right;
-  display:flex;
-  align-items:center;
-  gap:10px;
-  margin-left:10px;
+
+</style>
+<style id="wb4-css" data-wb="features4">
+/* 客户标签 / 咨询时间线 / 撤销 —— 追加样式 */
+.wb-tags-block{margin-top:4px}
+.wb-tags-block label{margin-bottom:4px}
+.wb-tags-block input[type="text"]{width:100%}
+.wb-tags-hint{font-size:11.5px;color:var(--muted,#9a8d7c);margin-top:5px;line-height:1.6}
+.wb-chip{display:inline-block;font-size:11.5px;line-height:1.5;padding:1px 8px;border-radius:999px;background:rgba(199,155,107,.16);color:#E3C79B;border:1px solid rgba(199,155,107,.35);margin:4px 6px 0 0}
+.wb-chips-mini{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.wb-chips-mini .wb-chip{font-size:10.5px;padding:0 6px;margin:0}
+.wb-note{font-size:10.5px;color:var(--muted,#9a8d7c);line-height:1.65;padding:10px 0 2px;border-top:1px dashed var(--line,#3a3128);margin-top:10px}
+.wb-tl-search{width:100%;margin-bottom:14px}
+.wb-tl-month{font-size:12px;color:var(--muted,#9a8d7c);letter-spacing:1px;margin:16px 0 6px;padding-bottom:4px;border-bottom:1px dashed var(--line,#3a3128)}
+.wb-tl-month:first-child{margin-top:0}
+.wb-tl-row{display:grid;grid-template-columns:84px 1fr auto;gap:10px;align-items:center;padding:8px 6px;border-radius:8px;cursor:default}
+.wb-tl-row:hover{background:rgba(255,255,255,.04)}
+.wb-tl-row .d{color:var(--muted,#9a8d7c);font-size:12px;font-variant-numeric:tabular-nums}
+.wb-tl-row .t{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wb-tl-row .t b{font-weight:600;color:var(--text,#EDE3D6)}
+.wb-tl-row .m{display:flex;gap:6px;align-items:center}
+.wb-tl-v{font-size:11px;padding:1px 7px;border-radius:999px;border:1px solid var(--line,#3a3128);color:var(--muted,#9a8d7c)}
+.wb-tl-v.准{color:#8fd18f;border-color:rgba(143,209,143,.4)}
+.wb-tl-v.部分准{color:#E3C79B;border-color:rgba(227,199,155,.4)}
+.wb-tl-v.不准{color:#e08a8a;border-color:rgba(224,138,138,.4)}
+.wb-tl-v.待验证{color:#9aa7d1;border-color:rgba(154,167,209,.4)}
+@media (max-width:640px){
+  .wb-tl-row{grid-template-columns:70px 1fr;row-gap:2px}
+  .wb-tl-row .m{grid-column:2;justify-content:flex-start}
 }
-.ta-toggle{
-  border:1px solid rgba(201,168,106,.45);
-  background:rgba(201,168,106,.10);
-  padding:1px 8px;
-  border-radius:999px;
-  cursor:pointer;
-  font-size:11.5px;
-  font-weight:400;
-  color:#c9a86a;
-  letter-spacing:.02em;
-  line-height:1.7;
-}
-.ta-toggle:hover{color:#e6c78d;background:rgba(201,168,106,.2)}
-.ta-hint{
-  font-size:11.5px;
-  font-weight:400;
-  color:#8d7f6d;
-  letter-spacing:.02em;
-}
-.ta-full{
-  position:fixed;
-  inset:0;
-  z-index:9999;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  padding:14px 14px calc(14px + env(safe-area-inset-bottom));
-  background:rgba(20,16,13,.97);
-  backdrop-filter:blur(2px);
-}
-.ta-full-top{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#d6c4a5;font-size:13px}
-.ta-full textarea{
-  flex:1;
-  width:100%;
-  height:auto !important;
-  min-height:0 !important;
-  padding:14px 16px;
-  font-size:16px;
-  line-height:1.9;
-  border-radius:10px;
-  resize:none;
-}
-</style></head>
+
+</style>
+</head>
 <body data-page-node-id="tkuWYF0eoLS63cHRGONj64">
 <!-- 移动端汉堡按钮 -->
 <button class="mobile-burger" id="mobileBurger" aria-label="打开导航" data-page-node-id="wtnav-burger-001">☰</button>
@@ -994,12 +1020,17 @@ textarea.ta-grow{
       <button class="btn" id="btnBackup" title="把文字、书籍与图片打包下载为 ZIP，可手动上传网盘" data-page-node-id="wtnav-backup-001">
         <span class="b-icon">☁</span>完整备份 ZIP
       </button>
+<button class="btn" id="btnStats" data-wb="stats"><span class="b-icon">📊</span>数据统计</button>
+<button class="btn" id="btnDataExport" data-wb="export"><span class="b-icon">⇩</span>分模块导出</button>
+<button class="btn" id="btnTimeline" data-wb="timeline"><span class="b-icon">🕑</span>咨询时间线</button>
     </div>
 
     <footer style="padding-top:14px;font-size:10.5px;color:var(--muted);line-height:1.7;margin-top:auto">
       2026-09-28 · v2<br>JSON 仅保存文字；完整 ZIP 含附件。导入支持 JSON / ZIP；阅读书籍与塔罗真图需要联网。
     </footer>
-  </aside>
+  
+<div class="wb-note" data-wb="local-note">资料保存在这台浏览器，同时同步到你的云端账号。换电脑、换浏览器或清缓存前，请先点上面的「完整备份 ZIP」。</div>
+</aside>
 
   <!-- 右侧主区 -->
   <div class="main" data-page-node-id="wtmain-001">
@@ -2234,7 +2265,27 @@ function openFileDB(){
     req.onerror = () => rej(req.error);
   });
 }
-async function putFile(id, blob){
+async function compressImageBlob(blob){
+  try{
+    if(!blob || !blob.type || blob.type.indexOf('image/') !== 0) return blob;
+    if(blob.type === 'image/gif') return blob;
+    if(blob.size <= 350 * 1024) return blob;
+    var bmp = await createImageBitmap(blob);
+    var max = 1600;
+    var r = Math.min(max / bmp.width, max / bmp.height, 1);
+    var w = Math.max(1, Math.round(bmp.width * r)), h = Math.max(1, Math.round(bmp.height * r));
+    var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    var ctx = cv.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(bmp, 0, 0, w, h);
+    var out = await new Promise(function(res){ try{ cv.toBlob(function(b){ res(b); }, 'image/jpeg', 0.82); }catch(_e){ res(null); } });
+    if(!out || out.size >= blob.size) return blob;
+    if(typeof toast === 'function') toast('鍥剧墖宸插帇缂?' + Math.round(blob.size/1024) + 'KB to ' + Math.round(out.size/1024) + 'KB');
+    return out;
+  }catch(_e){ return blob; }
+}
+async function putFile(id, blob, _skipCmp){
+  if(!_skipCmp) blob = await compressImageBlob(blob);
   const db=await openFileDB();
   await new Promise((res,rej)=>{
     const tx=db.transaction('files','readwrite');
@@ -2258,7 +2309,7 @@ async function getFile(id){
     try{
       const blob=await cloudGetFile(id);
       if(blob){
-        try{ await putFile(id, blob); }catch(_e){}
+        try{ await putFile(id, blob, true); }catch(_e){}
         return blob;
       }
     }catch(_e){}
@@ -6172,7 +6223,74 @@ if(storageLoadError){
   setTimeout(()=>{ if(currentTab==='books' && $('#modal').hidden && !state.books.length && !state.cases.length) toast('点任意空位收书，或用「导入书文件」批量导入 PDF / EPUB'); },700);
 }
 </script>
-<script id="ta-read-js">/* 长文本输入增强：随内容增高 + 可收起/展开 + 双击全屏编辑（不改数据结构） */
+<style id="ta-read">
+/* 长文本输入：为阅读与长内容录入优化（可收起/展开 + 随内容增高） */
+textarea.ta-grow{
+  min-height:100px;
+  padding:12px 14px;
+  font-size:15px !important;
+  line-height:1.85 !important;
+  border-radius:9px;
+  resize:vertical;
+  overflow-y:hidden;
+  transition:height .12s ease;
+}
+@media (max-width:640px){
+  textarea.ta-grow{min-height:108px;font-size:16px !important;line-height:1.9 !important;padding:12px 13px}
+}
+.ta-actions{
+  float:right;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-left:10px;
+}
+.ta-toggle{
+  border:1px solid rgba(201,168,106,.45);
+  background:rgba(201,168,106,.10);
+  padding:1px 8px;
+  border-radius:999px;
+  cursor:pointer;
+  font-size:11.5px;
+  font-weight:400;
+  color:#c9a86a;
+  letter-spacing:.02em;
+  line-height:1.7;
+}
+.ta-toggle:hover{color:#e6c78d;background:rgba(201,168,106,.2)}
+.ta-hint{
+  font-size:11.5px;
+  font-weight:400;
+  color:#8d7f6d;
+  letter-spacing:.02em;
+}
+.ta-full{
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding:14px 14px calc(14px + env(safe-area-inset-bottom));
+  background:rgba(20,16,13,.97);
+  backdrop-filter:blur(2px);
+}
+.ta-full-top{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#d6c4a5;font-size:13px}
+.ta-full textarea{
+  flex:1;
+  width:100%;
+  height:auto !important;
+  min-height:0 !important;
+  padding:14px 16px;
+  font-size:16px;
+  line-height:1.9;
+  border-radius:10px;
+  resize:none;
+}
+
+</style>
+<script id="ta-read-js">
+/* 长文本输入增强：随内容增高 + 可收起/展开 + 双击全屏编辑（不改数据结构） */
 (function(){
   var SKIP = { writingContent: 1 };
 
@@ -6323,5 +6441,1177 @@ if(storageLoadError){
   var mo = new MutationObserver(schedule);
   mo.observe(document.body, { attributes: true, attributeFilter: ['hidden','class'], childList: true, subtree: true });
 })();
-</script></body>
+
+</script>
+<script id="wb-features">
+/* 瑶的工作台 · 增强包：保存状态 / 防丢稿 / 一键备份 */
+(function () {
+  'use strict';
+  if (window.__wbFeatures) return;
+  window.__wbFeatures = true;
+
+  /* ---------- 1. 状态药丸 ---------- */
+  var style = document.createElement('style');
+  style.id = 'wb-features-css';
+  style.textContent = [
+    '#wbPill{position:fixed;right:16px;bottom:16px;z-index:9999;padding:7px 13px;border-radius:999px;',
+    'font-size:12.5px;letter-spacing:.02em;background:rgba(31,24,20,.92);color:#E8D9C4;',
+    'border:1px solid rgba(201,168,118,.35);box-shadow:0 6px 20px rgba(0,0,0,.35);',
+    'opacity:0;transform:translateY(6px);transition:opacity .18s,transform .18s;pointer-events:none;max-width:78vw}',
+    '#wbPill.on{opacity:1;transform:none}',
+    '#wbPill[data-kind="err"]{border-color:rgba(214,120,120,.6);color:#F0C9C9}',
+    '#wbPill[data-kind="saving"]{color:#E3C79A}',
+    '#wbPill::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.75;margin-right:7px;vertical-align:1px}',
+    '@media (max-width:640px){#wbPill{right:10px;bottom:calc(10px + env(safe-area-inset-bottom));font-size:12px}}',
+    '#btnQuickBackup{white-space:nowrap}'
+  ].join('');
+  document.head.appendChild(style);
+
+  var pill = document.createElement('div');
+  pill.id = 'wbPill';
+  pill.setAttribute('aria-live', 'polite');
+  document.body.appendChild(pill);
+
+  var pillTimer = null;
+  function status(text, kind) {
+    pill.textContent = text;
+    if (kind) pill.dataset.kind = kind; else pill.removeAttribute('data-kind');
+    pill.classList.add('on');
+    clearTimeout(pillTimer);
+    pillTimer = setTimeout(function () { pill.classList.remove('on'); }, kind === 'err' ? 5000 : 2200);
+  }
+  window.__wbStatus = status;
+
+  /* ---------- 2. 保存 / 同步状态 ---------- */
+  function cloudOn() {
+    try { return !!(window.SB && SB.enabled && SB.logged); } catch (e) { return false; }
+  }
+  var doneTimer = null;
+  function markSaved() {
+    clearTimeout(doneTimer);
+    doneTimer = setTimeout(function () {
+      var t = new Date();
+      var hh = ('0' + t.getHours()).slice(-2), mm = ('0' + t.getMinutes()).slice(-2);
+      status((cloudOn() ? '已同步 ' : '已保存 ') + hh + ':' + mm);
+    }, cloudOn() ? 900 : 260);
+  }
+
+  function patchSave() {
+    if (!window.commitState || window.__commitPatched) return;
+    var orig = window.commitState;
+    window.commitState = function (next) {
+      var r = orig.apply(this, arguments);
+      status(cloudOn() ? '同步中…' : '保存中…', 'saving');
+      markSaved();
+      return r;
+    };
+    window.__commitPatched = true;
+  }
+  patchSave();
+  var patchTimer = setInterval(function () { patchSave(); if (window.__commitPatched) clearInterval(patchTimer); }, 300);
+
+  /* ---------- 3. 草稿保护 ---------- */
+  var DRAFT_KEY = 'wb_modal_draft';
+  var modalSnap = null;
+
+  function modal() { return document.getElementById('modal'); }
+  function modalOpen() { var m = modal(); return !!(m && !m.hidden); }
+
+  function fieldsOf(root) {
+    if (!root) return [];
+    var all = root.querySelectorAll('input,textarea,select');
+    var out = [];
+    for (var i = 0; i < all.length; i++) {
+      var el = all[i];
+      if (el.type === 'file' || el.type === 'checkbox' || el.type === 'radio') continue;
+      if (!el.id) continue;
+      out.push(el);
+    }
+    return out;
+  }
+  function readDraft() {
+    var m = modal();
+    if (!m) return null;
+    var els = fieldsOf(m), obj = {};
+    for (var i = 0; i < els.length; i++) obj[els[i].id] = els[i].value;
+    return obj;
+  }
+  function currentSig() {
+    var d = readDraft();
+    return d ? JSON.stringify(d) : '';
+  }
+  function writeDraft() {
+    if (!modalOpen()) return;
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ at: Date.now(), data: readDraft() })); } catch (e) {}
+  }
+  function clearDraft() { try { localStorage.removeItem(DRAFT_KEY); } catch (e) {} }
+
+  function hasUnsaved() {
+    if (!modalOpen()) return false;
+    return currentSig() !== (modalSnap || '');
+  }
+
+  var draftTimer = null;
+  document.addEventListener('input', function (e) {
+    if (!modalOpen() || !e.target.closest('#modal')) return;
+    status(cloudOn() ? '有改动未保存' : '有改动未保存', 'saving');
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(writeDraft, 800);
+  }, true);
+
+  // 弹窗开关时记录基线 / 提示恢复草稿
+  var lastOpen = false;
+  setInterval(function () {
+    var now = modalOpen();
+    if (now && !lastOpen) {
+      modalSnap = currentSig();
+      setTimeout(function () {
+        try {
+          var raw = localStorage.getItem(DRAFT_KEY);
+          if (!raw) return;
+          var d = JSON.parse(raw);
+          if (!d || !d.data) return;
+          if (d.at && Date.now() - d.at > 6 * 3600 * 1000) { clearDraft(); return; }
+          var same = true, els = fieldsOf(modal());
+          for (var i = 0; i < els.length; i++) {
+            var v = d.data[els[i].id];
+            if (v !== undefined && v !== els[i].value) { same = false; break; }
+          }
+          if (same) return;
+          if (confirm('发现上次未保存的编辑（' + new Date(d.at).toLocaleTimeString() + '），要恢复吗？')) {
+            for (var j = 0; j < els.length; j++) {
+              var val = d.data[els[j].id];
+              if (val === undefined) continue;
+              els[j].value = val;
+              els[j].dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            status('草稿已恢复');
+          } else { clearDraft(); }
+        } catch (e) {}
+      }, 260);
+    }
+    if (!now && lastOpen) clearDraft();
+    lastOpen = now;
+  }, 400);
+
+  // 关闭页面时提醒
+  window.addEventListener('beforeunload', function (ev) {
+    if (hasUnsaved()) { ev.preventDefault(); ev.returnValue = '还有未保存的编辑，确定离开？'; return ev.returnValue; }
+  });
+
+  // 弹窗里 Ctrl+S / Cmd+S 直接保存
+  document.addEventListener('keydown', function (ev) {
+    if (!(ev.ctrlKey || ev.metaKey) || ev.key.toLowerCase() !== 's') return;
+    if (!modalOpen()) return;
+    ev.preventDefault();
+    var btn = document.getElementById('btnSave');
+    if (btn) btn.click();
+  }, true);
+
+  /* ---------- 4. 一键备份 ---------- */
+  function ymd() {
+    var d = new Date();
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+  }
+  var backingUp = false;
+  function quickBackup() {
+    if (backingUp) return;
+    if (!window.buildBackupZip || !window.downloadBlob) { status('备份组件未就绪', 'err'); return; }
+    backingUp = true;
+    status('打包中…', 'saving');
+    window.buildBackupZip().then(function (blob) {
+      window.downloadBlob(blob, '工作台备份_' + ymd() + '.zip');
+      status('备份已下载 ' + Math.round(blob.size / 1024) + 'KB');
+    }).catch(function (e) {
+      status('备份失败：' + (e && e.message || e), 'err');
+    }).then(function () { backingUp = false; });
+  }
+
+  function addBackupButton() {
+    var tb = document.querySelector('.toolbar');
+    if (!tb || document.getElementById('btnQuickBackup')) return;
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn';
+    b.id = 'btnQuickBackup';
+    b.title = '一键备份：把文字、书籍、案例图片打包成 ZIP 下载';
+    b.innerHTML = '<span class="b-icon">⬇</span>备份';
+    b.addEventListener('click', function (ev) { ev.preventDefault(); ev.stopPropagation(); quickBackup(); });
+    tb.appendChild(b);
+  }
+  addBackupButton();
+  var tbTimer = setInterval(function () { addBackupButton(); if (document.getElementById('btnQuickBackup')) clearInterval(tbTimer); }, 500);
+})();
+
+</script>
+<script id="wb-guide">
+/* 牌阵手册 · 依据《一对一牌阵》PDF（桌面）整理，2026-11-04 */
+(function () {
+  'use strict';
+  if (window.__wbGuide) return;
+  window.__wbGuide = true;
+
+  var GUIDE = [
+    {
+      key: 'none', appKey: 'nopai', name: '无牌阵',
+      note: '先看分布：有没有「正义」「命运之轮」这类需要看位置的牌，如果有，要判断它前后牌带来的影响。我个人习惯把第一眼吸引我注意的那张（不一定大牌）当核心因素，周围牌作补充信息。方法不同只是解读重心不同，结论应该一致。',
+      positions: []
+    },
+    {
+      key: 'loverscross', appKey: 'loverscross', name: '恋人十字（5 张）',
+      positions: [
+        { name: '过去', mean: '这段关系走到今天的成因', talk: '先看你们怎么走到这一步的——过去发生了什么。' },
+        { name: 'A 当下状态', mean: '问者此刻的真实状态', talk: '你现在是这样一种状态，对吧？' },
+        { name: 'B 当下状态', mean: '对方此刻的真实状态', talk: '他那边现在是这个状态，和你不在同一个频率上。' },
+        { name: '现在', mean: '两人此刻的关系实况', talk: '所以你们现在的关系，卡在这里。' },
+        { name: '未来', mean: '不加干预时的自然走向', talk: '照这样走下去，趋势是这个——但趋势不是定论。' }
+      ]
+    },
+    {
+      key: 'soulsync', appKey: 'soulsync', name: '灵感对应（6 张）',
+      note: '站点模板里这张阵是 5 位（对方是什么样的人/还有多久能遇到…），手册按 PDF 的关系版记录，用哪个都以你顺手为准。',
+      positions: [
+        { name: '1 对方对我的看法', mean: '他眼里你是什么人', talk: '在他眼里，你是这样一个人。' },
+        { name: '2 我对对方的看法', mean: '你眼里他是什么人', talk: '而你看到他的是这一面。' },
+        { name: '3 对方对这段感情的看法', mean: '他对关系的定性', talk: '他对这段关系本身的定性是这样。' },
+        { name: '4 我对这段感情的看法', mean: '你对关系的定性', talk: '你这边对关系的定性，和他是错位的。' },
+        { name: '5 对方对走向的期待', mean: '他想要的未来', talk: '他其实期待的是这个方向。' },
+        { name: '6 我对走向的期待', mean: '你想要的未来', talk: '而你想要的是那个方向——差距就在这儿。' }
+      ]
+    },
+    {
+      key: 'futurelovers', appKey: 'futurelovers', name: '未来恋人（5 张）',
+      positions: [
+        { name: '1 对方是什么样的人', mean: '未来对象的气质与类型', talk: '这个人大概是这样一类人。' },
+        { name: '2 还有多久能遇到', mean: '时间窗口', talk: '时间上，牌面给的是这个节奏。' },
+        { name: '3 当前的阻碍', mean: '现在挡路的东西', talk: '现在卡住你的是这一块。' },
+        { name: '4 相处方式', mean: '你们会怎么相处', talk: '你们的相处模式会偏向这样。' },
+        { name: '5 怎样才能遇到', mean: '要做的行动', talk: '想遇到，你得先做这件事。' }
+      ]
+    },
+    {
+      key: 'lovetree', appKey: 'lovetree', name: '爱情之树（5 张）',
+      positions: [
+        { name: '1 自身状况', mean: '你现在的感情底盘', talk: '先看你自己的状态。' },
+        { name: '2 过去经验/基础', mean: '带进来的旧模式', talk: '这部分是从过去带过来的底子。' },
+        { name: '3 事情现在状态', mean: '关系当前阶段', talk: '眼下这段关系处在这样的阶段。' },
+        { name: '4 近期发展', mean: '短期的变化', talk: '近期会往这个方向动。' },
+        { name: '5 潜在问题及不确定因素', mean: '隐患与变数', talk: '要留意的是这个不确定因素。' }
+      ]
+    },
+    {
+      key: 'careerx', appKey: '', name: '事业 X 阵（5 张）',
+      positions: [
+        { name: '1 心态', mean: '你对这件事的真实心态', talk: '你现在的心态，牌面看得很清楚。' },
+        { name: '2 时机', mean: '时间是否成熟', talk: '时机这一块，现在是这样的。' },
+        { name: '3 成功率', mean: '成事概率', talk: '成功率大致在这个水位。' },
+        { name: '4 影响因素', mean: '关键变量是什么', talk: '真正影响结果的是这一项。' },
+        { name: '5 未来发展', mean: '后续走向', talk: '往后走是这个趋势。' }
+      ]
+    },
+    {
+      key: 'reconcilex', appKey: 'reconcilex', name: '复合 X 阵（9 张）',
+      positions: [
+        { name: '1 你们的过去', mean: '关系的历史底子', talk: '你们的过去是这样，这决定了现在的起点。' },
+        { name: '2 你现在的情况', mean: '你的现状与诉求', talk: '你现在的处境是这一块。' },
+        { name: '3 对方现在情况', mean: '对方的现状', talk: '他那边现在是这个样子。' },
+        { name: '4 你对复合的想法', mean: '你要复合的真实动机', talk: '你想复合，真正的原因是这层。' },
+        { name: '5 对方对复合的想法', mean: '他怎么想复合这件事', talk: '他对复合的态度，比你以为的更复杂。' },
+        { name: '6 阻碍你的', mean: '拦路的因素', talk: '拦在前面的就是这个。' },
+        { name: '7 帮助你的', mean: '可借力的因素', talk: '能借力的地方在这里。' },
+        { name: '8 你不知道的', mean: '信息盲区', talk: '有一件事你还不知道。' },
+        { name: '9 最终结果', mean: '趋势结论', talk: '综合看，结果是这个方向。' }
+      ]
+    },
+    {
+      key: 'lovetower', appKey: 'lovetower', name: '爱情塔牌阵（6 张）',
+      note: '站点模板里这阵是 7 位（含「这段关系的能量」「对感情的整体建议」），手册按 PDF 的 6 位版本记录。',
+      positions: [
+        { name: '1 我如何看待爱情', mean: '你的爱情观', talk: '你对爱的理解是这样。' },
+        { name: '2 别人如何感受到我的爱', mean: '你表达出去的样子', talk: '你给出去的爱，别人接收到的是这一面。' },
+        { name: '3 我如何表达我的爱', mean: '你的表达方式', talk: '你表达爱的方式是这个路数。' },
+        { name: '4 什么阻碍了我的爱被表达', mean: '表达的卡点', talk: '卡住你表达的，是这个。' },
+        { name: '5 如何让爱表达更自由', mean: '解法', talk: '想更自由地爱，要在这里松一松。' },
+        { name: '6 我需要从爱中学到什么', mean: '这轮的功课', talk: '这一轮你要学的是这件事。' }
+      ]
+    },
+    {
+      key: 'loveexplore', appKey: 'loveexplore', name: '爱情探索（9 张）',
+      note: '站点模板里这阵是 4 位，手册按 PDF 的 9 位完整版记录。',
+      positions: [
+        { name: '1 这段关系的能量', mean: '关系的整体气场', talk: '这段关系的能量是这样的。' },
+        { name: '2 我怎么看待这段关系', mean: '你的视角', talk: '你从这边看它。' },
+        { name: '3 对方怎么看待这段关系', mean: '他的视角', talk: '他从那边看它，角度不一样。' },
+        { name: '4 阻碍我们的因素', mean: '外部阻力', talk: '挡在路上的是这个。' },
+        { name: '5 如何推动感情', mean: '可执行的推动点', talk: '要推动，就从这里入手。' },
+        { name: '6 我们的优势', mean: '可用的资源', talk: '你们手里其实有这个优势。' },
+        { name: '7 我们的弱点', mean: '需要补的短板', talk: '短板在这一块。' },
+        { name: '8 这段关系教会我们什么', mean: '成长课题', talk: '这段关系要教会你的是这件事。' },
+        { name: '9 对感情的整体建议', mean: '总方向', talk: '整体建议就一句话。' }
+      ]
+    },
+    {
+      key: 'lovevenus', appKey: 'lovevenus', name: '爱情维纳斯（8 张）',
+      positions: [
+        { name: '1 我对这段关系的想法', mean: '你的内心定位', talk: '你心里对这段关系的定位是这样。' },
+        { name: '2 对方对这段关系的想法', mean: '他的内心定位', talk: '他心里的定位，不太一样。' },
+        { name: '3 我对他的影响', mean: '你带给他的变化', talk: '你对他产生的影响是这个。' },
+        { name: '4 他对我的影响', mean: '他带给你的变化', talk: '他对你的影响，落在这一面。' },
+        { name: '5 我们之间的阻碍', mean: '关系卡点', talk: '你们之间卡的是这个。' },
+        { name: '6 我对未来发展的想法', mean: '你的期待', talk: '你想往这个方向走。' },
+        { name: '7 对方对未来发展的想法', mean: '他的期待', talk: '他想往那个方向走。' },
+        { name: '8 这段关系最终结果', mean: '趋势结论', talk: '走到最后，是这个结果。' }
+      ]
+    },
+    {
+      key: 'persona', appKey: 'persona', name: '抽人格（3 张）',
+      note: '只抽宫廷牌与大牌（不混小牌），偏娱乐向：人格会随当下状态变化，别当定论说死。',
+      positions: [
+        { name: '1 表面人格', mean: '别人看到的你', talk: '外人看到的你是这一副样子。' },
+        { name: '2 内心人格', mean: '你自己知道的你', talk: '但你内心其实是这样。' },
+        { name: '3 隐藏的人格', mean: '还没被看见的部分', talk: '还有一面，你自己都不太察觉。' }
+      ]
+    },
+    {
+      key: 'season1', appKey: 'season1', name: '四季牌阵 1（4 张）',
+      positions: [
+        { name: '整体运势', mean: '这一季的总基调', talk: '这个季度整体是这个能量。' },
+        { name: '压力和挑战', mean: '要扛的东西', talk: '压力主要来自这儿。' },
+        { name: '事业/学业', mean: '工作学习线', talk: '事业学业这条线是这样。' },
+        { name: '人际/情感', mean: '关系线', talk: '人际和感情这条线是那样。' }
+      ]
+    },
+    {
+      key: 'season2', appKey: 'season2', name: '四季牌阵 2（4 张）',
+      positions: [
+        { name: '工作', mean: '工作线', talk: '工作上这一季是这样。' },
+        { name: '财运', mean: '钱的走向', talk: '钱财这块的走势是这个。' },
+        { name: '健康/压力', mean: '身心状态', talk: '身心要留意这一块。' },
+        { name: '关系', mean: '关系线', talk: '关系上会这样发展。' }
+      ]
+    },
+    {
+      key: 'lifetree', appKey: 'tree', name: '生命树牌阵（12 张）',
+      note: '图上另标了「执念」与「可以达到的天花板」两个观察点，解读时作为第 7、第 6 位的补充看。',
+      positions: [
+        { name: '1 直接目的/结果', mean: '这件事想达成什么', talk: '你真正想要的结果是这个。' },
+        { name: '2 创造力/突破口', mean: '能撬动的点', talk: '突破口在这儿。' },
+        { name: '3 动脑子以后的作用', mean: '理性介入的效果', talk: '想清楚之后，这件事会变成这样。' },
+        { name: '4 外部机会/积极因素', mean: '可借的外力', talk: '外部其实有这个有利条件。' },
+        { name: '5 不和谐因素/冲突', mean: '内在或外部的矛盾', talk: '冲突点在这一块。' },
+        { name: '6 可以取得的最大帮助', mean: '资源上限', talk: '你能借到的最大帮助是这个。' },
+        { name: '7 这件事特别的地方', mean: '独特之处', talk: '这件事特别的地方在这儿。' },
+        { name: '8 吸引 ta 来问的原因', mean: '咨询动机', talk: '你之所以来问，是因为这个。' },
+        { name: '9 要学习加强的部分', mean: '要补的能力', talk: '接下来要补的是这一项。' },
+        { name: '10 事情的进展', mean: '推进节奏', talk: '事情会按这个节奏推进。' },
+        { name: '11 可能的走向', mean: '趋势', talk: '走向大概是这个方向。' },
+        { name: '12 人际上需要努力的地方', mean: '关系功课', talk: '人际上要花力气的是这里。' }
+      ]
+    },
+    {
+      key: 'choose2', appKey: 'choose2', name: '二选一牌阵（5 张）',
+      positions: [
+        { name: '1 核心', mean: '这个选择的核心命题', talk: '你先要看清，这个选择的核心是什么。' },
+        { name: '2 A 的短期发展', mean: '选 A 的近况', talk: '选 A 的话，短期内是这样。' },
+        { name: '3 B 的短期发展', mean: '选 B 的近况', talk: '选 B 的话，短期是那样。' },
+        { name: '4 A 的长期发展', mean: '选 A 的长线', talk: '拉长看，A 会走到这里。' },
+        { name: '5 B 的长期发展', mean: '选 B 的长线', talk: '拉长看，B 会走到那里。' }
+      ]
+    },
+    {
+      key: 'choose19', appKey: 'choose219', name: '二选一十九张',
+      note: 'A、B 各抽 7 张过程牌，再各抽 1 张结果牌，最后 1 张核心牌，共 19 张。',
+      positions: [
+        { name: 'A 的过程（7 张）', mean: '选 A 会经历什么', talk: '走 A 这条路，过程是这样的。' },
+        { name: 'B 的过程（7 张）', mean: '选 B 会经历什么', talk: '走 B 这条路，过程是那样。' },
+        { name: 'A 的结果', mean: 'A 的落点', talk: 'A 最后落在这一格。' },
+        { name: 'B 的结果', mean: 'B 的落点', talk: 'B 最后落在那一格。' },
+        { name: '核心', mean: '选择背后的真正课题', talk: '但真正的课题，是这一张。' }
+      ]
+    },
+    {
+      key: 'hexagram', appKey: 'hexagram', name: '六芒星牌阵（6 张 + 核心）',
+      positions: [
+        { name: '1 过去', mean: '成因', talk: '事情的源头在这里。' },
+        { name: '2 现在', mean: '当下实况', talk: '现在是这个局面。' },
+        { name: '3 未来', mean: '自然走向', talk: '照着走会到这里。' },
+        { name: '4 原因', mean: '深层原因', talk: '根子在这一点上。' },
+        { name: '5 环境', mean: '外部条件', talk: '你所处的环境是这样的。' },
+        { name: '6 建议', mean: '该怎么做', talk: '牌面给的建议是这个。' }
+      ]
+    },
+    {
+      key: 'health', appKey: 'health', name: '健康牌阵（3 张）',
+      note: '只做状态参考，不替代就医判断；涉及症状一律建议去医院。',
+      positions: [
+        { name: '1 身体的基本情况', mean: '总体状态', talk: '身体的大盘是这个状态。' },
+        { name: '2 内部情况', mean: '内部的消耗或淤堵', talk: '内部的消耗在这里。' },
+        { name: '3 其他补充信息', mean: '容易忽略的一点', talk: '还有一点容易被你忽略。' }
+      ]
+    },
+    {
+      key: 'celtic', appKey: 'celtic', name: '凯尔特十字（10 张）',
+      positions: [
+        { name: '1 当下状态', mean: '你此刻的位置', talk: '你现在站在这里。' },
+        { name: '2 目前的阻碍', mean: '横在面前的力', talk: '横在前面的阻力是这个。' },
+        { name: '3 潜在影响', mean: '底层的根基或远景', talk: '底下垫着的是这一层。' },
+        { name: '4 过去基础', mean: '已经发生并起作用的', talk: '过去留下的影响是这张。' },
+        { name: '5 近期未来', mean: '不久后的变化', talk: '近期会先出现这个。' },
+        { name: '6 远期未来', mean: '更远的结果方向', talk: '再往后走是那个样子。' },
+        { name: '7 你的感受', mean: '你的心理位置', talk: '你心里其实是这样想的。' },
+        { name: '8 对方的感受/环境', mean: '他人与环境', talk: '对方和环境那边是这样。' },
+        { name: '9 希望和恐惧', mean: '你最想要也最怕的', talk: '你最深的期待和害怕，都在这一张。' },
+        { name: '10 最终结果', mean: '结论', talk: '综合下来，结果是这个方向。' }
+      ]
+    },
+    {
+      key: 'planet', appKey: 'planets', name: '行星牌阵（7 张）',
+      note: '按 PDF：月亮=家庭/内心，水星=交流互动，金星=身边财与人际，太阳=个人表现与定位，火星=冲突与行动力，木星=机会与可挽回处，土星=困难与解法。',
+      positions: [
+        { name: '1 月亮 · 家庭因素/内心', mean: '情绪与家庭底盘', talk: '影响这件事的家庭或内心因素是这一块。' },
+        { name: '2 水星 · 交流互动', mean: '沟通状况', talk: '你们交流上的问题是这个。' },
+        { name: '3 金星 · 财与人际', mean: '身边资源', talk: '身边的财和人际是这个样子。' },
+        { name: '4 太阳 · 个人表现/定位', mean: '你在其中的位置', talk: '你在这里的表现和定位是这张。' },
+        { name: '5 火星 · 冲突/行动力', mean: '冲突点与执行力', talk: '冲突和行动力落在这一格。' },
+        { name: '6 木星 · 机会', mean: '可以行动、可以挽回的地方', talk: '能动手挽回的机会在这里。' },
+        { name: '7 土星 · 困难', mean: '难点与应对', talk: '难点是这个，解法也在这张里。' }
+      ]
+    },
+    {
+      key: 'pastlife', appKey: 'pastlife', name: '前世今生（9 张）',
+      positions: [
+        { name: '1 前世的我是谁', mean: '前世身份', talk: '前世那一面的你是这个样子。' },
+        { name: '2 前世学会的/职业/技能', mean: '留下的能力', talk: '那时留下的能力是这个。' },
+        { name: '3 上辈子留下的业力', mean: '做错的部分', talk: '上一世留下的功课在这里。' },
+        { name: '4 上辈子我为什么出生', mean: '来的目的', talk: '那一趟来的目的，是这件事。' },
+        { name: '5 这辈子的天赋/可学技能', mean: '可用的天分', talk: '这一世你自带的天分是这个。' },
+        { name: '6 今生需要解决的业力', mean: '要处理的课题', talk: '这一世要解的是这一题。' },
+        { name: '7 我要偿还的业力', mean: '要还的部分', talk: '要还的那一笔在这里。' },
+        { name: '8 我的贵人在哪里', mean: '助力来源', talk: '你的贵人出现在这个方向。' },
+        { name: '9 怎样才能圆满', mean: '此生的落点', talk: '要圆满，得走完这一程。' }
+      ]
+    },
+    {
+      key: 'pastlife2', appKey: 'pastlivetwo', name: '前世今生双人（8 张）',
+      positions: [
+        { name: '前世我们是什么关系', mean: '前世的连接', talk: '你们前世是这样的关系。' },
+        { name: '前世的我是什么人', mean: '你的前世身份', talk: '那一世你是这样的人。' },
+        { name: '前世的 ta 是什么人', mean: '对方的前世身份', talk: '那一世 ta 是那样的人。' },
+        { name: '前世关系的结果', mean: '有没有走到一起', talk: '那一世你们的结果是这样。' },
+        { name: '前世感情留下的遗憾', mean: '未完成的', talk: '没走完的遗憾在这里。' },
+        { name: '今生要共同克服的课题', mean: '共同的功课', talk: '这一世你们要一起过的是这一关。' },
+        { name: '今生为什么遇见', mean: '相遇的意义', talk: '你们这一世相遇，是为了这个。' },
+        { name: '今生我们的结果', mean: '这一世的走向', talk: '这一世的结果是这一张。' }
+      ]
+    },
+    {
+      key: 'destiny', appKey: 'fate', name: '命运牌阵（6 张 + 核心）',
+      positions: [
+        { name: '1 你的宿命', mean: '命定的那条线', talk: '你命里带着的那条线是这个。' },
+        { name: '2 你的自我', mean: '你此刻的自我', talk: '你现在的自我是这一张。' },
+        { name: '3 影响你人生最大的事情', mean: '关键事件', talk: '对你影响最大的事，是这个类型。' },
+        { name: '4 这件事对你的最大影响', mean: '它的作用', talk: '它在你身上留下的作用是这个。' },
+        { name: '5 来到这世界的目的', mean: '此生的方向', talk: '你来的目的是这一件事。' },
+        { name: '6 这一生要完成的课题', mean: '功课', talk: '这一生你要完成的是这一题。' }
+      ]
+    },
+    {
+      key: 'yearly', appKey: 'yearly', name: '年运牌阵（12 个月 + 核心）',
+      note: '按月份各抽一张，另抽一张核心牌定全年基调；月牌只看该月的关键字，别把细节说死。',
+      positions: [
+        { name: '一月～十二月', mean: '每个月的主题', talk: '这一个月的主旋律是这一张。' },
+        { name: '核心牌', mean: '全年基调', talk: '整年的底色，是这一张。' }
+      ]
+    }
+  ];
+
+  /* ---------------- UI ---------------- */
+  var CSS = [
+    '#wbGuideMask{position:fixed;inset:0;background:rgba(12,9,7,.62);z-index:10000;display:none;align-items:center;justify-content:center;padding:20px}',
+    '#wbGuideMask.on{display:flex}',
+    '#wbGuide{width:min(880px,100%);max-height:88vh;display:flex;flex-direction:column;background:var(--card,#241d18);color:var(--text,#EDE3D4);border:1px solid var(--line,rgba(201,168,118,.25));border-radius:14px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.5)}',
+    '#wbGuide header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line,rgba(201,168,118,.2));flex-wrap:wrap}',
+    '#wbGuide header h2{font-size:16px;margin:0;font-weight:600;letter-spacing:.04em}',
+    '#wbGuide header .g-search{flex:1;min-width:140px;padding:7px 10px;border-radius:8px;border:1px solid var(--line,rgba(201,168,118,.25));background:rgba(0,0,0,.18);color:inherit;font-size:13px}',
+    '#wbGuide header button{border:0;background:transparent;color:inherit;font-size:20px;cursor:pointer;line-height:1;padding:2px 6px}',
+    '#wbGuide .g-body{display:flex;min-height:0;flex:1}',
+    '#wbGuide .g-list{width:200px;overflow:auto;border-right:1px solid var(--line,rgba(201,168,118,.18));padding:8px;flex:none}',
+    '#wbGuide .g-list button{display:block;width:100%;text-align:left;padding:8px 10px;margin-bottom:4px;border-radius:8px;border:0;background:transparent;color:inherit;font-size:13px;cursor:pointer;line-height:1.35}',
+    '#wbGuide .g-list button:hover{background:rgba(201,168,118,.12)}',
+    '#wbGuide .g-list button.on{background:rgba(201,168,118,.22)}',
+    '#wbGuide .g-detail{flex:1;overflow:auto;padding:16px 18px}',
+    '#wbGuide .g-detail h3{margin:0 0 6px;font-size:15px}',
+    '#wbGuide .g-note{font-size:12.5px;line-height:1.75;color:var(--muted,#B7A794);background:rgba(201,168,118,.08);border-left:2px solid rgba(201,168,118,.5);padding:9px 12px;border-radius:0 8px 8px 0;margin:0 0 14px}',
+    '#wbGuide .g-pos{padding:10px 0;border-bottom:1px dashed rgba(201,168,118,.16)}',
+    '#wbGuide .g-pos:last-child{border-bottom:0}',
+    '#wbGuide .g-pos .n{font-size:11px;color:var(--muted,#B7A794);letter-spacing:.06em}',
+    '#wbGuide .g-pos .name{font-size:13.5px;font-weight:600;margin:2px 0 5px}',
+    '#wbGuide .g-pos .mean{font-size:13px;line-height:1.7}',
+    '#wbGuide .g-pos .talk{font-size:13px;line-height:1.7;color:#C9A876;margin-top:5px}',
+    '#wbGuide .g-pos .talk::before{content:"话术 · ";font-size:11px;opacity:.7}',
+    '@media (max-width:640px){#wbGuideMask{padding:0}#wbGuide{width:100%;height:100%;max-height:100%;border-radius:0}#wbGuide .g-body{flex-direction:column}#wbGuide .g-list{width:auto;max-height:34%;border-right:0;border-bottom:1px solid rgba(201,168,118,.18)}#wbGuide .g-detail{padding:14px}}'
+  ].join('');
+
+  function ensureDom() {
+    if (document.getElementById('wbGuideMask')) return;
+    var st = document.createElement('style');
+    st.id = 'wb-guide-css';
+    st.textContent = CSS;
+    document.head.appendChild(st);
+
+    var mask = document.createElement('div');
+    mask.id = 'wbGuideMask';
+    mask.innerHTML = '<div id="wbGuide" role="dialog" aria-modal="true" aria-label="牌阵手册">' +
+      '<header><h2>牌阵手册</h2><input class="g-search" id="wbGuideSearch" placeholder="搜索牌阵或位置，例如：复合、阻碍、未来">' +
+      '<button type="button" id="wbGuideClose" aria-label="关闭">×</button></header>' +
+      '<div class="g-body"><nav class="g-list" id="wbGuideList"></nav><section class="g-detail" id="wbGuideDetail"></section></div></div>';
+    document.body.appendChild(mask);
+
+    mask.addEventListener('click', function (e) { if (e.target === mask) close(); });
+    mask.querySelector('#wbGuideClose').addEventListener('click', close);
+    mask.querySelector('#wbGuideSearch').addEventListener('input', function () {
+      renderList(this.value.trim());
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && mask.classList.contains('on')) close();
+    });
+  }
+
+  var activeKey = null;
+
+  function match(item, q) {
+    if (!q) return true;
+    if (item.name.indexOf(q) >= 0) return true;
+    if ((item.note || '').indexOf(q) >= 0) return true;
+    for (var i = 0; i < item.positions.length; i++) {
+      var p = item.positions[i];
+      if ((p.name + p.mean + p.talk).indexOf(q) >= 0) return true;
+    }
+    return false;
+  }
+
+  function renderList(q) {
+    var list = document.getElementById('wbGuideList');
+    var rows = [];
+    for (var i = 0; i < GUIDE.length; i++) {
+      var it = GUIDE[i];
+      if (!match(it, q)) continue;
+      rows.push('<button type="button" data-key="' + it.key + '"' + (it.key === activeKey ? ' class="on"' : '') + '>' + it.name + '</button>');
+    }
+    list.innerHTML = rows.join('') || '<div style="padding:10px;font-size:12.5px;opacity:.7">没有匹配的牌阵</div>';
+    Array.prototype.forEach.call(list.querySelectorAll('button'), function (b) {
+      b.addEventListener('click', function () { show(b.dataset.key, true); });
+    });
+  }
+
+  function show(key, scrollTop) {
+    var item = null;
+    for (var i = 0; i < GUIDE.length; i++) if (GUIDE[i].key === key) { item = GUIDE[i]; break; }
+    if (!item) return;
+    activeKey = key;
+    renderList(document.getElementById('wbGuideSearch').value.trim());
+    var html = '<h3>' + item.name + '</h3>';
+    if (item.note) html += '<p class="g-note">' + item.note + '</p>';
+    if (!item.positions.length) {
+      html += '<p style="font-size:13px;line-height:1.8;opacity:.8">这张阵没有固定位置，靠整体分布与核心牌判断。</p>';
+    } else {
+      item.positions.forEach(function (p, idx) {
+        html += '<div class="g-pos"><div class="n">' + (p.name.indexOf('张') > 0 ? '' : ('# ' + (idx + 1))) + '</div>' +
+          '<div class="name">' + p.name + '</div>' +
+          '<div class="mean">' + p.mean + '</div>' +
+          '<div class="talk">' + p.talk + '</div></div>';
+      });
+    }
+    var detail = document.getElementById('wbGuideDetail');
+    detail.innerHTML = html;
+    if (scrollTop) detail.scrollTop = 0;
+  }
+
+  function open(key) {
+    ensureDom();
+    var mask = document.getElementById('wbGuideMask');
+    mask.classList.add('on');
+    var target = key || activeKey || 'loverscross';
+    show(target, true);
+    var s = document.getElementById('wbGuideSearch');
+    if (s) s.focus();
+  }
+  function close() {
+    var mask = document.getElementById('wbGuideMask');
+    if (mask) mask.classList.remove('on');
+  }
+  window.__wbGuideOpen = open;
+  window.__wbGuideData = GUIDE;
+
+  /* 入口 1：侧栏「数据」区 */
+  function addSidebarEntry() {
+    if (document.getElementById('btnSpreadGuide')) return;
+    var anchor = document.getElementById('btnBackup');
+    if (!anchor) return;
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn';
+    b.id = 'btnSpreadGuide';
+    b.title = '查看牌阵每个位置的含义与解读话术';
+    b.innerHTML = '<span class="b-icon">📖</span>牌阵手册';
+    b.addEventListener('click', function (e) { e.preventDefault(); open(); });
+    anchor.parentNode.insertBefore(b, anchor);
+  }
+
+  /* 入口 2：案例弹窗里的牌阵选择旁 */
+  function addModalEntry() {
+    var sel = document.getElementById('spreadTpl');
+    if (!sel || document.getElementById('btnSpreadGuideInline')) return;
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn small';
+    b.id = 'btnSpreadGuideInline';
+    b.textContent = '手册';
+    b.title = '打开当前牌阵的手册';
+    b.addEventListener('click', function (e) {
+      e.preventDefault();
+      var cur = sel.value;
+      var found = GUIDE.filter(function (g) { return g.appKey === cur; })[0];
+      open(found ? found.key : null);
+    });
+    sel.parentNode.insertBefore(b, sel.nextSibling);
+  }
+
+  var t = setInterval(function () {
+    addSidebarEntry();
+    addModalEntry();
+    if (document.getElementById('btnSpreadGuide')) clearInterval(t);
+  }, 600);
+})();
+
+</script>
+<script id="insights-js" data-wb="insights">
+/* 数据统计 + 分模块导出（独立模块，不改原始渲染逻辑） */
+(function () {
+  'use strict';
+  var LS = 'reading_case_workbench_v1';
+
+  function getState() {
+    try {
+      var s = (0, eval)('typeof state !== "undefined" ? state : null');
+      if (s && typeof s === 'object') return s;
+    } catch (e) {}
+    try {
+      var raw = localStorage.getItem(LS);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return {};
+  }
+  function arr(s, k) { var v = s[k]; return Array.isArray(v) ? v : []; }
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function ymd(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+  function todayStr() { return ymd(new Date()); }
+  function stamp() { var d = new Date(); return '' + d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + '_' + pad2(d.getHours()) + pad2(d.getMinutes()); }
+  function addDays(base, n) { var d = new Date(base.getTime()); d.setDate(d.getDate() + n); return d; }
+
+  var MODULES = [
+    { k: 'cases', n: '案例', icon: '🎴', csv: true, pick: function (c) { return { 记录ID: c.id || '', 编号: c.no, 日期: c.date, 标题: c.title, 类型: c.type, 领域: c.domain, 选题: c.topic, 客户: c.client, 判定: c.verdict, 牌阵: c.spread, 问题: c.question, 解读: c.result, 复盘: c.review, 反馈: c.feedback, 回访日: c.visitAt, 回访备注: c.visitNote }; } },
+    { k: 'clients', n: '客户', icon: '👤', csv: true, pick: function (c) { return { 记录ID: c.id || '', 姓名: c.name, 性别: c.gender, 生日: c.birth, 年龄: c.age, 星座: c.zodiac, 电话: c.phone, 微信: c.wechat, 备注: c.note }; } },
+    { k: 'books', n: '书单', icon: '📚', filter: function (b) { return !!b.title; } },
+    { k: 'tips', n: '每日知识', icon: '✦' },
+    { k: 'snippets', n: '随手记', icon: '✎' },
+    { k: 'topics', n: '选题', icon: '✍' },
+    { k: 'materials', n: '素材', icon: '📦' },
+    { k: 'todos', n: '待办', icon: '☑' },
+    { k: 'reviews', n: '复盘', icon: '📔' },
+    { k: 'writings', n: '作品', icon: '🖋' }
+  ];
+
+  function itemsOf(s, m) {
+    if (m.k === 'writings') {
+      var w = s.writings;
+      if (Array.isArray(w)) return w;
+      if (w && Array.isArray(w.list)) return w.list;
+      if (w && Array.isArray(w.chapters)) return w.chapters;
+      return [];
+    }
+    var a = arr(s, m.k);
+    return m.filter ? a.filter(m.filter) : a;
+  }
+
+  /* ---------- 通用图层 ---------- */
+  var mask = null;
+  function openLayer(title, sub, bodyHTML, footHTML) {
+    closeLayer();
+    mask = document.createElement('div');
+    mask.className = 'wbm-mask';
+    mask.innerHTML = '<div class="wbm" role="dialog" aria-modal="true" aria-label="' + esc(title) + '">' +
+      '<div class="wbm-head"><h2>' + esc(title) + '</h2>' + (sub ? '<span class="sub">' + esc(sub) + '</span>' : '') +
+      '<button type="button" class="wbm-x" aria-label="关闭">×</button></div>' +
+      '<div class="wbm-body">' + bodyHTML + '</div>' +
+      (footHTML ? '<div class="wbm-foot">' + footHTML + '</div>' : '') + '</div>';
+    document.body.appendChild(mask);
+    mask.addEventListener('click', function (e) { if (e.target === mask) closeLayer(); });
+    var x = mask.querySelector('.wbm-x');
+    if (x) x.addEventListener('click', closeLayer);
+    return mask;
+  }
+  function closeLayer() {
+    if (mask && mask.parentNode) mask.parentNode.removeChild(mask);
+    mask = null;
+  }
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && mask) closeLayer(); });
+
+  function bars(rows, emptyText) {
+    if (!rows.length) return '<div class="wbm-empty">' + esc(emptyText || '还没有数据') + '</div>';
+    var max = 0;
+    rows.forEach(function (r) { if (r.v > max) max = r.v; });
+    if (!max) max = 1;
+    return rows.map(function (r) {
+      var w = Math.max(2, Math.round(r.v / max * 100));
+      return '<div class="wbm-bar"><span class="name" title="' + esc(r.k) + '">' + esc(r.k) + '</span>' +
+        '<span class="track"><span class="fill" style="width:' + w + '%"></span></span>' +
+        '<span class="v">' + r.v + '</span></div>';
+    }).join('');
+  }
+  function countBy(list, keyFn) {
+    var map = {}, order = [];
+    list.forEach(function (x) {
+      var k = keyFn(x) || '未填';
+      if (!(k in map)) { map[k] = 0; order.push(k); }
+      map[k]++;
+    });
+    return order.map(function (k) { return { k: k, v: map[k] }; }).sort(function (a, b) { return b.v - a.v; });
+  }
+
+  /* ---------- 统计 ---------- */
+  function showStats() {
+    var s = getState();
+    var cases = arr(s, 'cases');
+    var clients = arr(s, 'clients');
+    var thisMonth = todayStr().slice(0, 7);
+    var monthCount = cases.filter(function (c) { return String(c.date || '').slice(0, 7) === thisMonth; }).length;
+    var pending = cases.filter(function (c) { return (c.verdict || '') === '待验证'; }).length;
+    var n = cases.length;
+
+    var domainRows = countBy(cases, function (c) { return c.domain; });
+    var verdictRows = countBy(cases, function (c) { return c.verdict; });
+
+    // 近 6 个月
+    var base = new Date();
+    var months = [];
+    for (var i = 5; i >= 0; i--) {
+      var d = new Date(base.getFullYear(), base.getMonth() - i, 1);
+      var key = d.getFullYear() + '-' + pad2(d.getMonth() + 1);
+      months.push({ key: key, label: (d.getMonth() + 1) + '月', v: cases.filter(function (c) { return String(c.date || '').slice(0, 7) === key; }).length });
+    }
+    var mmax = 0;
+    months.forEach(function (m) { if (m.v > mmax) mmax = m.v; });
+    if (!mmax) mmax = 1;
+    var monthHTML = '<div class="wbm-months">' + months.map(function (m) {
+      var h = Math.round(m.v / mmax * 88);
+      return '<div class="wbm-month"><span class="n">' + (m.v || '') + '</span>' +
+        '<span class="col" style="height:' + Math.max(3, h) + 'px"></span>' +
+        '<span class="k">' + m.label + '</span></div>';
+    }).join('') + '</div>';
+
+    // 7 天内回访
+    var t = new Date(todayStr() + 'T00:00:00');
+    var limit = ymd(addDays(t, 7));
+    var upcoming = cases.filter(function (c) { return c.visitAt && c.visitAt >= todayStr() && c.visitAt <= limit; })
+      .sort(function (a, b) { return String(a.visitAt).localeCompare(String(b.visitAt)); });
+
+    // 最近 5 条
+    var recent = cases.slice().sort(function (a, b) {
+      var x = String(a.date || ''), y = String(b.date || '');
+      if (x !== y) return y.localeCompare(x);
+      return (b.no || 0) - (a.no || 0);
+    }).slice(0, 5);
+
+    var body = '' +
+      '<div class="wbm-cards">' +
+      '<div class="wbm-card"><div class="n">' + n + '</div><div class="l">案例总数</div></div>' +
+      '<div class="wbm-card"><div class="n">' + monthCount + '</div><div class="l">本月新增</div></div>' +
+      '<div class="wbm-card"><div class="n">' + clients.length + '</div><div class="l">客户数</div></div>' +
+      '<div class="wbm-card"><div class="n">' + pending + '</div><div class="l">待验证</div></div>' +
+      '</div>' +
+      '<div class="wbm-sec"><h3>近 6 个月咨询量</h3>' + monthHTML + '</div>' +
+      '<div class="wbm-grid2">' +
+        '<div class="wbm-sec"><h3>领域分布</h3>' + bars(domainRows, '还没有案例，先记一单就有了') + '</div>' +
+        '<div class="wbm-sec"><h3>判定分布</h3>' + bars(verdictRows, '还没有判定记录') + '</div>' +
+      '</div>' +
+      '<div class="wbm-grid2">' +
+        '<div class="wbm-sec"><h3>7 天内要回访</h3>' + (upcoming.length
+          ? '<div class="wbm-list">' + upcoming.slice(0, 6).map(function (c) {
+              return '<div class="row"><span class="d">' + esc(c.visitAt) + '</span><span class="t">' + esc(c.client || '') + ' · ' + esc(c.title || '') + '</span></div>';
+            }).join('') + '</div>'
+          : '<div class="wbm-empty">这 7 天没有安排回访</div>') + '</div>' +
+        '<div class="wbm-sec"><h3>最近记录</h3>' + (recent.length
+          ? '<div class="wbm-list">' + recent.map(function (c) {
+              return '<div class="row"><span class="d">' + esc(c.date || '') + '</span><span class="t">' + esc(c.client || '') + ' · ' + esc(c.title || '') + '</span><span class="d">' + esc(c.verdict || '') + '</span></div>';
+            }).join('') + '</div>'
+          : '<div class="wbm-empty">还没有案例</div>') + '</div>' +
+      '</div>';
+
+    openLayer('数据统计', '本地实时算，不联网', body, '');
+  }
+
+  /* ---------- 导出 ---------- */
+  function fileSafe(s) { return String(s || '').replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 40); }
+  function saveBlob(blob, name) {
+    try {
+      if (typeof downloadBlob === 'function') { downloadBlob(blob, name); return; }
+    } catch (e) {}
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 4000);
+  }
+  function toCSV(rows) {
+    if (!rows.length) return '\uFEFF';
+    var cols = Object.keys(rows[0]);
+    var head = cols.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(',');
+    var body = rows.map(function (r) {
+      return cols.map(function (c) {
+        var v = r[c] == null ? '' : String(r[c]).replace(/\r?\n/g, ' ⏎ ');
+        return '"' + v.replace(/"/g, '""') + '"';
+      }).join(',');
+    }).join('\r\n');
+    return '\uFEFF' + head + '\r\n' + body;
+  }
+  function exportModule(m, kind) {
+    var s = getState();
+    var items = itemsOf(s, m);
+    if (!items.length) { if (window.toast) toast('这个模块还没有内容'); return; }
+    if (kind === 'csv') {
+      if (!m.pick) { if (window.toast) toast('这个模块只支持 JSON'); return; }
+      var rows = items.map(function (x) { return m.pick(x); });
+      var csv = toCSV(rows);
+      saveBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), m.n + '_' + stamp() + '.csv');
+    } else {
+      var payload = { module: m.k, name: m.n, exportedAt: new Date().toISOString(), count: items.length, items: items };
+      saveBlob(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' }), m.n + '_' + stamp() + '.json');
+    }
+  }
+  function exportAll() {
+    var s = getState();
+    var out = { exportedAt: new Date().toISOString(), modules: {} };
+    MODULES.forEach(function (m) { out.modules[m.k] = itemsOf(s, m); });
+    saveBlob(new Blob([JSON.stringify(out, null, 2)], { type: 'application/json;charset=utf-8' }), '全部数据_' + stamp() + '.json');
+  }
+
+  function showExport() {
+    var s = getState();
+    var rows = MODULES.map(function (m, i) {
+      var n = itemsOf(s, m).length;
+      var acts = '<button type="button" class="wbm-btn" data-json="' + i + '">JSON</button>' +
+        (m.pick ? '<button type="button" class="wbm-btn" data-csv="' + i + '">Excel/CSV</button>' : '');
+      return '<tr><td>' + m.icon + ' ' + esc(m.n) + '</td><td class="c">' + n + '</td><td class="acts">' + acts + '</td></tr>';
+    }).join('');
+
+    var body = '<table class="wbm-table"><thead><tr><th>模块</th><th class="c">条数</th><th class="acts">导出</th></tr></thead><tbody>' +
+      rows + '</tbody></table>' +
+      '<p class="wbm-empty" style="margin-top:14px">JSON 适合回导进本站；Excel/CSV 适合自己看或用表格软件统计。图片与附件不在这里，用侧栏的「完整备份 ZIP」。</p>';
+
+    var foot = '<button type="button" class="wbm-btn primary" id="wbmExportAll">导出全部（JSON）</button>';
+    openLayer('分模块导出', '只导你要的那一块', body, foot);
+
+    mask.addEventListener('click', function (e) {
+      var j = e.target.getAttribute && e.target.getAttribute('data-json');
+      var c = e.target.getAttribute && e.target.getAttribute('data-csv');
+      if (j !== null && j !== undefined) { exportModule(MODULES[+j], 'json'); }
+      else if (c !== null && c !== undefined) { exportModule(MODULES[+c], 'csv'); }
+    });
+    var all = mask.querySelector('#wbmExportAll');
+    if (all) all.addEventListener('click', exportAll);
+  }
+
+  /* ---------- 挂按钮 ---------- */
+  function bind() {
+    var b1 = document.getElementById('btnStats');
+    var b2 = document.getElementById('btnDataExport');
+    if (b1 && !b1.dataset.wired) { b1.dataset.wired = '1'; b1.addEventListener('click', showStats); }
+    if (b2 && !b2.dataset.wired) { b2.dataset.wired = '1'; b2.addEventListener('click', showExport); }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
+  else bind();
+  var tries = 0;
+  var timer = setInterval(function () { bind(); if (++tries > 20) clearInterval(timer); }, 500);
+
+  window.__wbStats = showStats;
+  window.__wbExport = showExport;
+})();
+
+</script>
+<script id="wb4-js" data-wb="features4">
+/* 客户标签 + 咨询时间线 + Ctrl+Z 撤销（全部不改存储格式：只新增可选字段 tags） */
+(function () {
+  'use strict';
+
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  function st() {
+    try { var s = (0, eval)('typeof state !== "undefined" ? state : null'); if (s && typeof s === 'object') return s; } catch (e) {}
+    return {};
+  }
+  function toastIf(m) { try { if (typeof toast === 'function') toast(m); } catch (e) {} }
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+  /* ---------------- Ctrl+Z 撤销 ---------------- */
+  var undoStack = [];
+  var undoing = false;
+  var commitOrig = window.commitState;
+  var pendingTags = null;   // null = 本次保存不涉及标签
+  var curClientId = null;
+
+  function applyPendingTags(next) {
+    if (pendingTags === null) return;
+    var tags = pendingTags;
+    pendingTags = null;
+    if (!Array.isArray(next.clients)) next.clients = [];
+    var cl = null;
+    if (curClientId) {
+      for (var i = 0; i < next.clients.length; i++) {
+        if (next.clients[i] && next.clients[i].id === curClientId) { cl = next.clients[i]; break; }
+      }
+    }
+    if (!cl) {
+      var nmEl = document.getElementById('clName');
+      var nm = nmEl ? String(nmEl.value || '').trim() : '';
+      if (nm) {
+        for (var j = 0; j < next.clients.length; j++) {
+          if (next.clients[j] && String(next.clients[j].name || '') === nm) cl = next.clients[j];
+        }
+      }
+    }
+    if (cl) cl.tags = tags;
+  }
+
+  if (typeof commitOrig === 'function') {
+    window.commitState = function (next) {
+      // 客户弹窗打开时，把标签输入框的值带进本次提交（原始保存函数直接引用，绕过了包装层）
+      try {
+        var cm = document.getElementById('clientModal');
+        if (cm && !cm.hidden) {
+          var ti = document.getElementById('wbTagsInput');
+          if (ti) pendingTags = parseTags(ti.value);
+        }
+      } catch (e) {}
+      if (!undoing) {
+        try {
+          undoStack.push(JSON.stringify(st()));
+          if (undoStack.length > 20) undoStack.shift();
+        } catch (e) {}
+      }
+      try { applyPendingTags(next); } catch (e) {}
+      return commitOrig.apply(this, arguments);
+    };
+  }
+
+  function undo() {
+    if (!undoStack.length) { toastIf('没有可撤销的操作了'); return; }
+    var snap = undoStack.pop();
+    try {
+      var prev = JSON.parse(snap);
+      undoing = true;
+      if (typeof commitOrig === 'function') commitOrig.call(window, prev);
+      if (typeof render === 'function') render();
+      toastIf('已撤销上一步');
+    } catch (e) {
+      toastIf('撤销失败：' + e.message);
+    } finally {
+      undoing = false;
+    }
+  }
+  document.addEventListener('keydown', function (e) {
+    if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey) return;
+    var k = String(e.key || '').toLowerCase();
+    if (k !== 'z') return;
+    var t = e.target, tag = (t && t.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || (t && t.isContentEditable)) return; // 输入框内保留原生撤销
+    e.preventDefault();
+    undo();
+  });
+
+  /* ---------------- 客户标签 ---------------- */
+  function parseTags(v) {
+    return String(v || '').split(/[,，;；\s]+/).map(function (x) { return x.trim(); })
+      .filter(function (x) { return x && x.length <= 12; }).slice(0, 8);
+  }
+  function tagBlockHTML(tags) {
+    return '<div class="wb-tags-block" id="wbTagsBlock">' +
+      '<label for="wbTagsInput">客户标签 <span style="color:var(--muted);font-weight:400">（逗号分隔，最多 8 个）</span></label>' +
+      '<input id="wbTagsInput" type="text" placeholder="例：老客户, 情感, 复购, 学生" value="' + esc((tags || []).join(', ')) + '">' +
+      '<div class="wb-tags-hint">标签只用来分类和筛选，不影响任何已有数据。</div>' +
+      '</div>';
+  }
+  function ensureTagUI() {
+    var modal = document.getElementById('clientModal');
+    if (!modal || modal.hidden) return;
+    if (document.getElementById('wbTagsBlock')) return;
+    var note = document.getElementById('clNote');
+    if (!note || !note.parentNode) return;
+    var wrap = document.createElement('div');
+    wrap.innerHTML = tagBlockHTML([]);
+    var blk = wrap.firstChild;
+    note.parentNode.insertBefore(blk, note.nextSibling);
+    var id = curClientId;
+    var cl = null;
+    var s = st();
+    if (id && Array.isArray(s.clients)) {
+      for (var i = 0; i < s.clients.length; i++) if (s.clients[i].id === id) { cl = s.clients[i]; break; }
+    }
+    var inp = document.getElementById('wbTagsInput');
+    if (inp) inp.value = cl && Array.isArray(cl.tags) ? cl.tags.join(', ') : '';
+  }
+
+  var openOrig = window.openClientEditor;
+  if (typeof openOrig === 'function') {
+    window.openClientEditor = function (id) {
+      curClientId = id || null;
+      var r = openOrig.apply(this, arguments);
+      ensureTagUI();
+      setTimeout(ensureTagUI, 50);
+      return r;
+    };
+  }
+  var saveOrig = window.saveClient;
+  if (typeof saveOrig === 'function') {
+    window.saveClient = function () {
+      var inp = document.getElementById('wbTagsInput');
+      if (inp) pendingTags = parseTags(inp.value);
+      var r = saveOrig.apply(this, arguments);
+      setTimeout(function () { pendingTags = null; }, 0);
+      return r;
+    };
+  }
+  var closeOrig = window.closeClientEditor;
+  if (typeof closeOrig === 'function') {
+    window.closeClientEditor = function () {
+      pendingTags = null;
+      var r = closeOrig.apply(this, arguments);
+      curClientId = null;
+      return r;
+    };
+  }
+
+  /* 列表里显示标签（渲染后补一层，不改原渲染逻辑） */
+  function decorate() {
+    var grid = document.getElementById('grid');
+    if (!grid) return;
+    var clients = st().clients;
+    if (!Array.isArray(clients)) return;
+    var map = {};
+    clients.forEach(function (c) { if (c && c.id) map[c.id] = c; });
+    var nodes = grid.querySelectorAll('.slot[data-client]');
+    for (var i = 0; i < nodes.length; i++) {
+      var el = nodes[i];
+      var cl = map[el.getAttribute('data-client')];
+      var box = el.querySelector('.wb-chips-mini');
+      if (!cl || !Array.isArray(cl.tags) || !cl.tags.length) { if (box) box.parentNode.removeChild(box); continue; }
+      if (box) continue;
+      var d = document.createElement('div');
+      d.className = 'wb-chips-mini';
+      d.innerHTML = cl.tags.slice(0, 4).map(function (t) { return '<span class="wb-chip">' + esc(t) + '</span>'; }).join('');
+      el.appendChild(d);
+    }
+  }
+  var renderOrig = window.render;
+  if (typeof renderOrig === 'function') {
+    window.render = function () {
+      var r = renderOrig.apply(this, arguments);
+      setTimeout(decorate, 0);
+      return r;
+    };
+  }
+
+  /* ---------------- 咨询时间线 ---------------- */
+  var mask = null;
+  function closeLayer() {
+    if (mask && mask.parentNode) mask.parentNode.removeChild(mask);
+    mask = null;
+  }
+  function openLayer(title, sub, bodyHTML) {
+    closeLayer();
+    mask = document.createElement('div');
+    mask.className = 'wbm-mask';
+    mask.innerHTML = '<div class="wbm" role="dialog" aria-modal="true" aria-label="' + esc(title) + '">' +
+      '<div class="wbm-head"><h2>' + esc(title) + '</h2>' + (sub ? '<span class="sub">' + esc(sub) + '</span>' : '') +
+      '<button type="button" class="wbm-x" aria-label="关闭">×</button></div>' +
+      '<div class="wbm-body">' + bodyHTML + '</div></div>';
+    document.body.appendChild(mask);
+    mask.addEventListener('click', function (e) { if (e.target === mask) closeLayer(); });
+    mask.querySelector('.wbm-x').addEventListener('click', closeLayer);
+  }
+
+  function timelineHTML(q) {
+    var cases = (st().cases || []).slice();
+    q = String(q || '').trim().toLowerCase();
+    if (q) {
+      cases = cases.filter(function (c) {
+        return String(c.client || '').toLowerCase().indexOf(q) >= 0 ||
+          String(c.title || '').toLowerCase().indexOf(q) >= 0 ||
+          String(c.domain || '').toLowerCase().indexOf(q) >= 0 ||
+          String(c.verdict || '').toLowerCase().indexOf(q) >= 0;
+      });
+    }
+    if (!cases.length) return '<div class="wbm-empty">没有匹配的咨询记录</div>';
+    cases.sort(function (a, b) {
+      var x = String(a.date || ''), y = String(b.date || '');
+      if (x !== y) return y.localeCompare(x);
+      return (b.no || 0) - (a.no || 0);
+    });
+    var out = '', last = '';
+    cases.forEach(function (c) {
+      var d = String(c.date || '');
+      var mk = d.slice(0, 7) || '未填日期';
+      if (mk !== last) {
+        out += '<div class="wb-tl-month">' + esc(mk === '未填日期' ? mk : mk.replace('-', ' 年 ') + ' 月') + '</div>';
+        last = mk;
+      }
+      var v = String(c.verdict || '');
+      out += '<div class="wb-tl-row"><span class="d">' + esc(d.slice(5) || '—') + '</span>' +
+        '<span class="t"><b>' + esc(c.client || '未填客户') + '</b> · ' + esc(c.title || '（无标题）') + '</span>' +
+        '<span class="m">' + (c.domain ? '<span class="wb-tl-v">' + esc(c.domain) + '</span>' : '') +
+        (v ? '<span class="wb-tl-v ' + esc(v) + '">' + esc(v) + '</span>' : '') + '</span></div>';
+    });
+    return out;
+  }
+
+  function openTimeline() {
+    var total = (st().cases || []).length;
+    openLayer('咨询时间线', '共 ' + total + ' 条 · 按日期倒序',
+      '<input class="wb-tl-search" id="wbTlSearch" type="text" placeholder="搜客户 / 标题 / 领域 / 判定…">' +
+      '<div id="wbTlList">' + timelineHTML('') + '</div>');
+    var inp = document.getElementById('wbTlSearch');
+    if (inp) {
+      var list = document.getElementById('wbTlList');
+      inp.addEventListener('input', function () { list.innerHTML = timelineHTML(inp.value); });
+      setTimeout(function () { inp.focus(); }, 30);
+    }
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && mask) closeLayer();
+  });
+
+  /* 按钮 */
+  function bind() {
+    var b = document.getElementById('btnTimeline');
+    if (b && !b.dataset.wired) { b.dataset.wired = '1'; b.addEventListener('click', openTimeline); }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
+  else bind();
+  var tries = 0;
+  var timer = setInterval(function () { bind(); if (++tries > 20) clearInterval(timer); }, 500);
+
+  window.__wbUndo = undo;
+  window.__wbTimeline = openTimeline;
+})();
+
+</script>
+</body>
 </html>
