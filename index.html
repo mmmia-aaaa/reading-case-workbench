@@ -144,7 +144,9 @@ input:disabled{background:#241B16;color:var(--muted)}
 /* 旧 .tabs 类不再使用（已改为左侧 .sidebar 导航），保留占位避免外部样式覆盖 */
 
 /* ===== 网格与卡位 ===== */
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:18px 16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:18px 16px;animation:gridIn .22s ease}
+@keyframes gridIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.grid{animation:none}}
 .slot{position:relative;background:var(--card);border:1px solid var(--line);border-radius:11px;
   min-height:132px;padding:18px 13px 12px 17px;cursor:pointer;box-shadow:var(--shadow);
   transition:transform var(--dur) var(--ease),box-shadow var(--dur) var(--ease),border-color var(--dur) var(--ease),background-color var(--dur) var(--ease);
@@ -294,8 +296,11 @@ input:disabled{background:#241B16;color:var(--muted)}
 .mini-cards i.mt{opacity:.3;border-style:dashed}
 
 /* ===== 弹窗 ===== */
-.modal-mask{position:fixed;inset:0;background:rgba(10,7,5,.7);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
-.modal{background:var(--card);border-radius:15px;max-width:640px;width:100%;max-height:88vh;overflow:auto;padding:24px 26px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.modal-mask{position:fixed;inset:0;background:rgba(10,7,5,.7);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px;animation:maskIn .2s ease}
+@keyframes maskIn{from{opacity:0}to{opacity:1}}
+.modal{background:var(--card);border-radius:15px;max-width:640px;width:100%;max-height:88vh;overflow:auto;padding:24px 26px;box-shadow:0 20px 60px rgba(0,0,0,.6);animation:modalIn .24s ease}
+@keyframes modalIn{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media (prefers-reduced-motion: reduce){.modal-mask,.modal{animation:none}}
 .modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 .modal-head h2{font-family:var(--serif);font-size:19px;font-weight:600}
 .close{border:none;background:none;font-size:24px;color:var(--muted);cursor:pointer;line-height:1;padding:4px 8px}
@@ -695,6 +700,15 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:44px;lette
   .tt-text{font-size:16px}
   .topic-list,.mat-list{grid-template-columns:1fr}
   .cal-day{min-height:56px}
+  /* 触控目标与安全区：按钮/导航最小 44px，避开刘海与手势条 */
+  .nav-item{padding-block:12px}
+  .btn{padding-block:12px}
+  .sidebar{padding-bottom:max(20px, env(safe-area-inset-bottom))}
+  .main{padding-bottom:max(70px, env(safe-area-inset-bottom))}
+  .mobile-burger{top:max(14px, env(safe-area-inset-top));left:14px}
+  .toolbar .search{min-width:0}
+  .slot{min-height:120px}
+  .rv-thumb{width:88px;height:88px}
 }
 @media (max-width:820px){
   .r-body{flex-direction:column}
@@ -2884,7 +2898,7 @@ function renderReviews(q, f, active){
       ? `<span class="rv-client" data-client="${esc(cl.id)}" title="点击打开客户">客户：${esc(cl.name)}</span>`
       : (rv.clientId ? '<span class="rv-missing">客户已删除</span>' : '');
     const thumbs = (rv.images||[]).length
-      ? `<div class="rv-thumbs">${rv.images.map((m,i)=>`<img data-rvimg="${esc(rv.id)}-${i}" class="rv-thumb" alt="${esc(m.name||'复盘图')}" title="${esc(m.name||'复盘图')}">`).join('')}</div>`
+      ? `<div class="rv-thumbs">${rv.images.map((m,i)=>`<img data-rvimg="${esc(rv.id)}-${i}" class="rv-thumb" loading="lazy" alt="${esc(m.name||'复盘图')}" title="${esc(m.name||'复盘图')}">`).join('')}</div>`
       : '';
     const links = [caseTag, clientTag].filter(Boolean).join('<span class="rv-sep">·</span>');
     const goto = c ? ` data-goto-case="${esc(c.id)}"` : '';
@@ -2904,6 +2918,7 @@ function renderReviews(q, f, active){
       </div>
       <div class="rv-actions">
         <button class="btn small" data-review-edit="${esc(rv.id)}">编辑</button>
+        <button class="btn small" data-review-export="${esc(rv.id)}">导出</button>
         <button class="btn small" data-review-del="${esc(rv.id)}" style="color:#e06c75">删除</button>
       </div>
     </div>`;
@@ -2929,6 +2944,38 @@ function loadReviewThumbs(){
       if(b && el.isConnected) el.src = URL.createObjectURL(b);
     }).catch(()=>{});
   });
+}
+/* 复盘导出：生成可发给客户/存档的分享文案，支持复制与下载 .txt */
+function exportReview(id){
+  const rv = (state.reviews||[]).find(x => x.id === id);
+  if(!rv){ toast('复盘不存在'); return; }
+  const c = state.cases.find(x => x.id === rv.caseId);
+  const cl = state.clients.find(x => x.id === rv.clientId);
+  const lines = [];
+  lines.push('复盘 · ' + (rv.date || '未填日期'));
+  lines.push('——'.repeat(10));
+  if(cl) lines.push('客户：' + cl.name);
+  if(c)  lines.push('案例：' + c.title);
+  if(rv.cat) lines.push('分类：' + rv.cat);
+  lines.push('');
+  lines.push(rv.content || '（无内容）');
+  if(c && c.question) lines.push('\n—— 咨询问题 ——\n' + c.question);
+  if(c && c.result) lines.push('\n—— 结果 ——\n' + c.result);
+  if(c && c.feedback) lines.push('\n—— 反馈 ——\n' + c.feedback);
+  const text = lines.join('\n');
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(() => toast('复盘文案已复制，可粘贴发给客户'), () => {});
+  }else{
+    copyText(text);
+  }
+  const fname = '复盘_' + (rv.date || today()) + '.txt';
+  const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fname;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  toast('已复制并下载 ' + fname);
 }
 function openReviewEditor(id){
   editingReview = id || null;
@@ -4699,6 +4746,8 @@ $('#grid').addEventListener('click', e => {
     if(confirm('确定删除这条复盘吗？')) deleteReview();
     return;
   }
+  const rvExp = e.target.closest('[data-review-export]');
+  if(rvExp){ exportReview(rvExp.dataset.reviewExport); return; }
   const rvCatBtn = e.target.closest('[data-reviewcat]');
   if(rvCatBtn){ reviewCat = rvCatBtn.dataset.reviewcat; render(); return; }
   const slotEl = e.target.closest('[data-slot]');
@@ -4886,7 +4935,11 @@ $('#sidebarMask').addEventListener('click', () => {
   $('#sidebarMask').classList.remove('show');
 });
 
-$('#search').addEventListener('input', render);
+let searchTimer = null;
+$('#search').addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(render, 180);
+});
 $('#filter').addEventListener('change', render);
 $('#filterType').addEventListener('change', render);
 $('#filterVerdict').addEventListener('change', render);
