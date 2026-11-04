@@ -808,6 +808,9 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:44px;lette
 .writing-side-title{font-size:13px;font-weight:700;color:var(--muted);letter-spacing:1px}
 .writing-new{background:var(--green);color:#1d1510;border:none;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:700;cursor:pointer}
 .writing-new:hover{filter:brightness(1.08)}
+.writing-docbar{display:flex;gap:6px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line)}
+.writing-docsel{flex:1;min-width:0;background:var(--card-deep);border:1px solid var(--line);border-radius:7px;color:var(--ink);font-size:12.5px;padding:6px 8px;outline:none}
+.writing-new2{flex:none;padding:6px 10px;font-size:12px}
 .writing-list{flex:1;overflow-y:auto;padding:8px}
 .writing-item{padding:10px 12px;border-radius:9px;cursor:pointer;margin-bottom:4px;border:1px solid transparent}
 .writing-item:hover{background:var(--card-hover)}
@@ -934,15 +937,19 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:44px;lette
     <section id="writingPanel" class="writing-panel" hidden>
       <div class="writing-side">
         <div class="writing-side-head">
-          <span class="writing-side-title">文章</span>
-          <button class="writing-new" id="btnAddWriting" title="新建文章">＋ 新建</button>
+          <span class="writing-side-title">章节</span>
+          <button class="writing-new" id="btnAddChapter" title="新建章节">＋ 章节</button>
+        </div>
+        <div class="writing-docbar">
+          <select id="writingDocSel" class="writing-docsel" title="切换作品"></select>
+          <button class="writing-new writing-new2" id="btnAddWriting" title="新建文章">＋ 文章</button>
         </div>
         <div id="writingList" class="writing-list"></div>
       </div>
       <div class="writing-main">
         <div class="writing-main-head">
-          <input id="writingTitle" class="writing-title" placeholder="文章标题…" maxlength="80">
-          <button class="writing-del" id="btnDelWriting" title="删除当前文章">删除</button>
+          <input id="writingTitle" class="writing-title" placeholder="章节标题…" maxlength="80">
+          <button class="writing-del" id="btnDelWriting" title="删除当前章节">删除</button>
         </div>
         <textarea id="writingContent" class="writing-content" placeholder="开始写作…"></textarea>
         <div id="writingStat" class="writing-stat">字数 0 · 段落 0 · 字符 0</div>
@@ -1332,6 +1339,8 @@ const SB_LOC = (typeof location !== 'undefined' && location.search) ? location.s
 const SB_PARAMS = SB_LOC ? new URLSearchParams(SB_LOC) : new URLSearchParams();
 /* 云端配置：优先 URL 参数；否则用本地记住的配置（首次带参登录后记住，之后免参数直连） */
 const SB_CFG_KEY = 'wb_sb_cfg';
+/* 默认云端配置：任何设备用普通地址打开也默认连云端（登录一次即可），无需再带参数 */
+const DEFAULT_SB = { url: 'https://yducspadskbllsfilnyc.supabase.co', key: 'sb_publishable_ztuajSLdZHsuZ3Aws-7VJQ__4lYwecO' };
 function sbCfg(){
   const u = SB_PARAMS.get('sbUrl'), k = SB_PARAMS.get('sbKey');
   if(u && k) return {url: u.replace(/\/+$/, ''), key: k};
@@ -1339,7 +1348,7 @@ function sbCfg(){
     const c = JSON.parse(localStorage.getItem(SB_CFG_KEY) || 'null');
     if(c && c.url && c.key) return {url: c.url.replace(/\/+$/, ''), key: c.key};
   }catch(_e){}
-  return null;
+  return {url: DEFAULT_SB.url, key: DEFAULT_SB.key};
 }
 const SB = {
   enabled: !!sbCfg(),
@@ -2261,56 +2270,112 @@ function render(){
   }
 }
 
-/* —— 写作区（参照 WonderPen：多篇文章 + 底部实时字数统计，云端同步） —— */
+/* —— 写作区（章节制：作品 = 多章节，左侧章节列表 + 跳转，右侧编辑；WonderPen 式实时字数统计，云端同步） —— */
 let currentWritingId = null;
+let currentChapterId = null;
 function writingCounts(text){
   const s = text || '';
   const chars = s.replace(/\s/g, '').length;
   const paras = s.trim() ? s.split(/\n+/).filter(x => x.trim()).length : 0;
   return { words: chars, paras, chars: s.length };
 }
+function currentWriting(){ return (state.writings||[]).find(w => w.id === currentWritingId); }
+function currentChapter(){
+  const w = currentWriting();
+  return (w && Array.isArray(w.chapters)) ? w.chapters.find(c => c.id === currentChapterId) : null;
+}
+function ensureWritingDoc(){
+  if(!(state.writings||[]).length){ currentWritingId = null; currentChapterId = null; return; }
+  if(!currentWriting()){
+    currentWritingId = state.writings[0].id;
+    currentChapterId = null;
+  }
+  const w = currentWriting();
+  if(!(w.chapters||[]).length){ currentChapterId = null; return; }
+  if(!currentChapter()) currentChapterId = w.chapters[0].id;
+}
+function renderDocSel(){
+  const sel = $('#writingDocSel');
+  sel.innerHTML = '<option value="">＋ 新建文章</option>' +
+    (state.writings||[]).map(w => '<option value="' + esc(w.id) + '"' + (w.id===currentWritingId?' selected':'') + '>' + esc(w.title || '未命名作品') + '</option>').join('');
+}
 function renderWritingList(){
-  const list = state.writings || [];
+  ensureWritingDoc();
+  renderDocSel();
+  const w = currentWriting();
   const el = $('#writingList');
-  el.innerHTML = list.length
-    ? list.map(w => {
-        const c = writingCounts(w.content);
+  if(!w){
+    el.innerHTML = '<div class="writing-empty">还没有作品<br>点「＋ 文章」开始写作</div>';
+    return;
+  }
+  const chapters = w.chapters || [];
+  el.innerHTML = chapters.length
+    ? chapters.map(c => {
+        const ct = writingCounts(c.content);
         let d = '';
-        try{ d = w.updated ? (new Date(w.updated)).toLocaleDateString('zh-CN', {month:'numeric', day:'numeric'}) : ''; }catch(_e){}
-        return '<div class="writing-item' + (w.id===currentWritingId?' active':'') + '" data-wid="' + esc(w.id) + '">' +
-          '<div class="writing-item-title">' + esc(w.title || '未命名') + '</div>' +
-          '<div class="writing-item-meta">' + esc(d) + ' · ' + c.words + ' 字</div>' +
+        try{ d = c.updated ? (new Date(c.updated)).toLocaleDateString('zh-CN', {month:'numeric', day:'numeric'}) : ''; }catch(_e){}
+        return '<div class="writing-item' + (c.id===currentChapterId?' active':'') + '" data-cid="' + esc(c.id) + '">' +
+          '<div class="writing-item-title">' + esc(c.title || '未命名章节') + '</div>' +
+          '<div class="writing-item-meta">' + esc(d) + ' · ' + ct.words + ' 字</div>' +
         '</div>';
       }).join('')
-    : '<div class="writing-empty">还没有文章<br>点「＋ 新建」开始写作</div>';
-  el.querySelectorAll('.writing-item').forEach(div => { div.onclick = () => selectWriting(div.dataset.wid); });
+    : '<div class="writing-empty">还没有章节<br>点「＋ 章节」开始写作</div>';
+  el.querySelectorAll('.writing-item').forEach(div => { div.onclick = () => selectChapter(div.dataset.cid); });
 }
-function currentWriting(){ return (state.writings||[]).find(w => w.id === currentWritingId); }
-function selectWriting(id){
-  currentWritingId = id;
-  const w = currentWriting();
-  $('#writingTitle').value = w ? w.title||'' : '';
-  $('#writingContent').value = w ? w.content||'' : '';
+function selectChapter(id){
+  currentChapterId = id;
+  const c = currentChapter();
+  $('#writingTitle').value = c ? c.title||'' : '';
+  $('#writingContent').value = c ? c.content||'' : '';
   renderWritingList();
   updateWritingStat();
 }
 function newWriting(){
   if(!Array.isArray(state.writings)) state.writings = [];
-  const w = { id:'w' + Date.now(), title:'', content:'', updated:new Date().toISOString() };
+  const now = new Date().toISOString();
+  const w = { id:'w' + Date.now() + Math.floor(Math.random()*999), title:'', updated:now,
+    chapters:[{ id:'c' + Date.now() + Math.floor(Math.random()*999), title:'', content:'', updated:now }] };
   state.writings.unshift(w);
-  currentWritingId = w.id;
+  currentWritingId = w.id; currentChapterId = w.chapters[0].id;
   commitState(state);
+  renderDocSel(); renderWritingList();
   $('#writingTitle').value = ''; $('#writingContent').value = '';
-  renderWritingList(); updateWritingStat();
+  updateWritingStat();
+  $('#writingTitle').focus();
+}
+function switchWriting(id){
+  if(id === ''){ newWriting(); return; }
+  currentWritingId = id;
+  const w = currentWriting(); if(!w) return;
+  currentChapterId = (w.chapters && w.chapters.length) ? w.chapters[0].id : null;
+  commitState(state);
+  renderDocSel(); renderWritingList();
+  if(currentChapterId) selectChapter(currentChapterId);
+  else { $('#writingTitle').value=''; $('#writingContent').value=''; updateWritingStat(); }
+}
+function newChapter(){
+  const w = currentWriting();
+  if(!w){ newWriting(); return; }
+  if(!Array.isArray(w.chapters)) w.chapters = [];
+  const now = new Date().toISOString();
+  const c = { id:'c' + Date.now() + Math.floor(Math.random()*999), title:'', content:'', updated:now };
+  w.chapters.push(c);
+  w.updated = now;
+  currentChapterId = c.id;
+  commitState(state);
+  renderWritingList();
+  $('#writingTitle').value = ''; $('#writingContent').value = '';
+  updateWritingStat();
   $('#writingTitle').focus();
 }
 function deleteWriting(){
-  if(!currentWritingId) return;
-  if(!confirm('确定删除这篇文章？')) return;
-  state.writings = (state.writings||[]).filter(w => w.id !== currentWritingId);
-  currentWritingId = state.writings.length ? state.writings[0].id : null;
+  const w = currentWriting(); if(!w) return;
+  if(!confirm('确定删除当前章节？')) return;
+  w.chapters = (w.chapters||[]).filter(c => c.id !== currentChapterId);
+  w.updated = new Date().toISOString();
+  currentChapterId = (w.chapters && w.chapters.length) ? w.chapters[0].id : null;
   commitState(state);
-  if(currentWritingId) selectWriting(currentWritingId);
+  if(currentChapterId) selectChapter(currentChapterId);
   else { $('#writingTitle').value=''; $('#writingContent').value=''; renderWritingList(); updateWritingStat(); }
 }
 function updateWritingStat(){
@@ -2319,21 +2384,27 @@ function updateWritingStat(){
 }
 function bindWriting(){
   $('#btnAddWriting').onclick = newWriting;
+  $('#btnAddChapter').onclick = newChapter;
   $('#btnDelWriting').onclick = deleteWriting;
+  $('#writingDocSel').addEventListener('change', () => { switchWriting($('#writingDocSel').value); });
   $('#writingTitle').addEventListener('input', () => {
-    const w = currentWriting(); if(!w) return;
-    w.title = $('#writingTitle').value;
-    w.updated = new Date().toISOString();
+    const c = currentChapter(); if(!c) return;
+    c.title = $('#writingTitle').value;
+    const w = currentWriting(); if(w) w.updated = new Date().toISOString();
     commitState(state);
     renderWritingList();
   });
   $('#writingContent').addEventListener('input', () => {
-    const w = currentWriting(); if(!w) return;
-    w.content = $('#writingContent').value;
-    w.updated = new Date().toISOString();
+    const c = currentChapter(); if(!c) return;
+    c.content = $('#writingContent').value;
+    const w = currentWriting(); if(w) w.updated = new Date().toISOString();
     commitState(state);
     updateWritingStat();
   });
+  ensureWritingDoc();
+  renderDocSel();
+  renderWritingList();
+  if(currentChapterId) selectChapter(currentChapterId);
 }
 
 function rateOf(items){
@@ -5301,6 +5372,17 @@ function normalizeState(d){
   if(s.snippets===undefined && Array.isArray(s.notes)) s.snippets=s.notes;
   for(const key of ['books','cases','tips','snippets','publicReads','topics','materials','todos','legacyPublicReads','clients','reviews','writings']) records(s,key);
   delete s.notes;
+  /* 写作区兼容迁移：旧扁平文章 {title,content} → 章节制 chapters */
+  s.writings.forEach(w => {
+    if(!Array.isArray(w.chapters)){
+      const oldContent = typeof w.content === 'string' ? w.content : '';
+      const oldTitle = typeof w.title === 'string' ? w.title : '';
+      w.chapters = [{ id: 'c' + Date.now() + Math.floor(Math.random()*99999), title: oldTitle || '正文', content: oldContent, updated: (typeof w.updated === 'string') ? w.updated : new Date().toISOString() }];
+      w.title = oldTitle || '未命名作品';
+      delete w.content;
+    }
+    w.chapters.forEach(c => { text(c,'title'); text(c,'content'); });
+  });
   s.books.forEach(b=>{
     b.slot=Number(b.slot);
     if(!Number.isInteger(b.slot)||b.slot<1||b.slot>50) throw new Error('书位须在 1–50 之间');
