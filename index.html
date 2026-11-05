@@ -999,13 +999,31 @@ body.te-open .mobile-burger{display:none !important}
 
 </style>
 <style id="note-edit-css">
-/* 随手记：编辑入口 */
+/* 随手记：编辑入口 + 编辑弹窗 */
 .note-item{position:relative}
-.note-item .ni-edit{border:none;background:none;color:var(--muted);cursor:pointer;font-size:12px;line-height:1;padding:2px 6px;border-radius:6px;font-family:inherit}
-.note-item .ni-edit:hover{color:var(--ink);background:rgba(255,255,255,.07)}
+.note-item .ni-edit{border:1px solid rgba(255,255,255,.12);background:none;color:var(--muted);cursor:pointer;font-size:12px;line-height:1;padding:3px 8px;border-radius:6px;font-family:inherit}
+.note-item .ni-edit:hover{color:var(--ink);background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.22)}
 .note-item .ne-text{min-height:180px}
-.te-modal .te-row input.ne-tags{font-size:14px;background:rgba(0,0,0,.26)}
-.te-modal .te-row input.ne-tags::placeholder{color:#8a7d6d;opacity:1}
+
+/* 弹窗内的行 */
+.ne-modal .te-body{gap:9px}
+.ne-modal .ne-row1,.ne-modal .ne-row2{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ne-modal .ne-row1>.te-catwrap:first-child{flex:0 0 auto;min-width:180px}
+.ne-modal .ne-row2>.te-catwrap{flex:1 1 260px}
+.ne-modal .te-catbtn{min-width:0;font-size:13px;padding:8px 11px}
+.ne-modal .te-catbtn.ph{color:#8a7d6d}
+.ne-modal .ne-subwrap{display:flex;align-items:center;flex:1 1 200px;position:relative;min-width:0}
+.ne-modal .ne-subwrap input{width:100%;padding:8px 30px 8px 11px;border-radius:8px;border:1px solid var(--line,#3a3128);background:rgba(0,0,0,.26);color:inherit;font:inherit;font-size:13px}
+.ne-modal .ne-subwrap input::placeholder{color:#8a7d6d;opacity:1}
+.ne-modal .ne-subpick{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:24px;height:24px;border:none;background:none;color:var(--muted);cursor:pointer;font-size:12px;border-radius:6px}
+.ne-modal .ne-subpick:hover{color:var(--ink);background:rgba(255,255,255,.08)}
+.ne-modal .ne-tags{flex:1 1 180px;padding:8px 11px;border-radius:8px;border:1px solid var(--line,#3a3128);background:rgba(0,0,0,.26);color:inherit;font:inherit;font-size:13px;min-width:0}
+.ne-modal .ne-tags::placeholder{color:#8a7d6d;opacity:1}
+
+/* 自绘菜单里的空态 */
+.te-catmenu .te-catempty{padding:10px 12px;color:#8a7d6d;font-size:12px}
+.te-catmenu .te-catitem{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left}
+.te-catmenu .ti-ok{color:var(--accent,#c79b6b);font-size:12px}
 
 </style>
 </head>
@@ -8269,15 +8287,14 @@ textarea.ta-grow{
 
 </script>
 <script id="note-edit-js">
-/* 随手记：编辑正文 / 标签 */
+/* 随手记：编辑正文 / 分类 / 小类 / 关联书 / 标签 */
 (function () {
   'use strict';
 
-  function st() {
-    try { var s = (0, eval)('typeof state !== "undefined" ? state : null'); return (s && typeof s === 'object') ? s : null; } catch (e) { return null; }
-  }
-  function fn(name) { try { return (0, eval)('typeof ' + name + ' === "function" ? ' + name + ' : null'); } catch (e) { return null; } }
-  function toastIf(m) { var t = fn('toast'); if (t) { try { t(m); } catch (e) {} } }
+  function ev(code) { try { return (0, eval)(code); } catch (e) { return null; } }
+  function st() { var s = ev('typeof state !== "undefined" ? state : null'); return (s && typeof s === 'object') ? s : null; }
+  function glob(name) { return ev('typeof ' + name + ' !== "undefined" ? ' + name + ' : null'); }
+  function toastIf(m) { var t = glob('toast'); if (typeof t === 'function') { try { t(m); } catch (e) {} } }
   function esc(v) {
     return String(v == null ? '' : v).replace(/[&<>"]/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
@@ -8286,39 +8303,140 @@ textarea.ta-grow{
 
   var cur = null;
 
+  function closeMenus() {
+    var m = document.body.__teMenu;
+    if (m && m.parentNode) m.parentNode.removeChild(m);
+    document.body.__teMenu = null;
+  }
+
+  /* 深色自绘下拉（复用 tip-edit 的 .te-catwrap/.te-catbtn/.te-catmenu 样式） */
+  function menuSel(items, value, placeholder) {
+    var wrap = document.createElement('div');
+    wrap.className = 'te-catwrap';
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'te-catbtn';
+    wrap.appendChild(btn);
+
+    var api = {
+      el: wrap,
+      value: value == null ? '' : String(value),
+      items: [],
+      setItems: function (list) {
+        api.items = list || [];
+        var hit = null, i;
+        for (i = 0; i < api.items.length; i++) if (String(api.items[i].v) === String(api.value)) { hit = api.items[i]; break; }
+        if (!hit && api.value !== '') api.value = '';
+        btn.textContent = hit ? hit.t : (placeholder || '未选择');
+        btn.classList.toggle('ph', !hit);
+      },
+      setValue: function (v) { api.value = v == null ? '' : String(v); api.setItems(api.items); },
+      open: function () {
+        closeMenus();
+        var menu = document.createElement('div');
+        menu.className = 'te-catmenu';
+        menu.innerHTML = api.items.map(function (it, i) {
+          var on = String(it.v) === String(api.value);
+          return '<button type="button" class="te-catitem' + (on ? ' on' : '') + '" data-i="' + i + '">' +
+            esc(it.t) + (on ? '<span class="ti-ok">✓</span>' : '') + '</button>';
+        }).join('');
+        document.body.appendChild(menu);
+        var r = btn.getBoundingClientRect();
+        menu.style.minWidth = Math.max(170, r.width) + 'px';
+        menu.style.left = Math.round(r.left) + 'px';
+        place(menu, r);
+        document.body.__teMenu = menu;
+        menu.addEventListener('click', function (e) {
+          var b = e.target.closest('.te-catitem');
+          if (!b) return;
+          var it = api.items[+b.getAttribute('data-i')];
+          if (!it) return;
+          api.setValue(it.v);
+          closeMenus();
+          if (api.onChange) api.onChange(api.value);
+        });
+      }
+    };
+    btn.addEventListener('click', function (e) { e.stopPropagation(); api.open(); });
+    api.setItems(items || []);
+    return api;
+  }
+
+
+  /* 菜单定位：优先向下，下方空间不够再向上，并限制最大高度 */
+  function place(menu, r) {
+    var below = window.innerHeight - r.bottom - 12;
+    var above = r.top - 12;
+    var down = below >= 140 || below >= above;
+    var room = down ? below : above;
+    menu.style.maxHeight = Math.min(300, Math.max(120, room)) + 'px';
+    if (down) {
+      menu.style.top = (r.bottom + 6) + 'px';
+    } else {
+      var mh = menu.getBoundingClientRect().height;
+      menu.style.top = Math.max(12, r.top - Math.min(mh, room) - 6) + 'px';
+    }
+  }
+
+  document.addEventListener('mousedown', function (e) {
+    var m = document.body.__teMenu;
+    if (!m) return;
+    if (m.contains(e.target)) return;
+    if (e.target.closest && e.target.closest('.te-catbtn')) return;
+    closeMenus();
+  }, true);
+
   function close() {
+    closeMenus();
     if (cur && cur.mask && cur.mask.parentNode) cur.mask.parentNode.removeChild(cur.mask);
     cur = null;
+  }
+
+  function openPicker(anchor, list, onPick) {
+    closeMenus();
+    var menu = document.createElement('div');
+    menu.className = 'te-catmenu';
+    menu.innerHTML = list.length
+      ? list.map(function (s, i) { return '<button type="button" class="te-catitem" data-i="' + i + '">' + esc(s) + '</button>'; }).join('')
+      : '<div class="te-catempty">还没有小类，直接手填就行</div>';
+    document.body.appendChild(menu);
+    var r = anchor.getBoundingClientRect();
+    menu.style.minWidth = Math.max(170, r.width) + 'px';
+    menu.style.left = Math.round(r.left) + 'px';
+    place(menu, r);
+    document.body.__teMenu = menu;
+    menu.addEventListener('click', function (e) {
+      var b = e.target.closest('.te-catitem');
+      if (!b) return;
+      closeMenus();
+      onPick(list[+b.getAttribute('data-i')] || '');
+    });
   }
 
   function open(id) {
     var s = st();
     if (!s || !Array.isArray(s.snippets)) return;
-    var item = null;
-    for (var i = 0; i < s.snippets.length; i++) if (String(s.snippets[i].id) === String(id)) { item = s.snippets[i]; break; }
+    var item = null, i;
+    for (i = 0; i < s.snippets.length; i++) if (String(s.snippets[i].id) === String(id)) { item = s.snippets[i]; break; }
     if (!item) { toastIf('这条随手记已不存在'); return; }
     close();
 
-    var book = null;
-    if (item.bookSlot != null && Array.isArray(s.books)) {
-      for (var j = 0; j < s.books.length; j++) if (s.books[j].slot === item.bookSlot) { book = s.books[j]; break; }
-    }
-    var sub = [];
-    if (book) sub.push('📖 《' + (book.title || ('第' + book.slot + '本')) + '》');
-    if (item.cat) sub.push(item.cat);
-    if (item.date) sub.push(item.date);
+    var CATS = glob('BOOK_CATS') || [{ key: 'other', label: '其他', icon: '' }];
+    var subcatsFn = glob('noteSubcatsByCat');
+    var booksFn = glob('noteBooksFor');
 
     var mask = document.createElement('div');
     mask.className = 'te-mask';
     mask.innerHTML =
-      '<div class="te-modal" role="dialog" aria-modal="true">' +
+      '<div class="te-modal ne-modal" role="dialog" aria-modal="true">' +
         '<div class="te-head"><span class="te-title">编辑随手记</span>' +
-          '<span class="te-sub">' + esc(sub.join(' · ')) + '</span>' +
+          '<span class="te-sub">' + esc(item.date || '') + '</span>' +
           '<button type="button" class="te-x" aria-label="关闭">×</button></div>' +
         '<div class="te-body">' +
           '<textarea class="te-text ne-text" spellcheck="false"></textarea>' +
-          '<div class="te-row"><input type="text" class="ne-tags" placeholder="标签，用中文逗号或空格分隔（可留空）"></div>' +
-          '<div class="te-hint">换行会原样保留 · Ctrl + Enter 保存 · Esc 取消</div>' +
+          '<div class="te-row ne-row1"></div>' +
+          '<div class="te-row ne-row2"></div>' +
+          '<div class="te-hint">改分类 / 小类 / 关联书 会移动这条随手记的位置 · Ctrl + Enter 保存 · Esc 取消</div>' +
         '</div>' +
         '<div class="te-foot">' +
           '<button type="button" class="btn small te-cancel">取消</button>' +
@@ -8328,12 +8446,72 @@ textarea.ta-grow{
 
     var ta = mask.querySelector('.ne-text');
     ta.value = item.text || '';
-    mask.querySelector('.ne-tags').value = (item.tags || []).join('，');
+
+    var catSel = menuSel(CATS.map(function (c) {
+      return { v: c.key, t: (c.icon ? c.icon + ' ' : '') + c.label };
+    }), item.cat || (CATS[0] && CATS[0].key) || '', '选择分类');
+
+    var subInput = document.createElement('input');
+    subInput.type = 'text';
+    subInput.className = 'ne-subcat';
+    subInput.placeholder = '小类（可手填）';
+    subInput.value = item.subcat || '';
+    var subWrap = document.createElement('div');
+    subWrap.className = 'te-catwrap ne-subwrap';
+    subWrap.appendChild(subInput);
+    var subPick = document.createElement('button');
+    subPick.type = 'button';
+    subPick.className = 'ne-subpick';
+    subPick.title = '从已有小类里选';
+    subPick.textContent = '▾';
+    subWrap.appendChild(subPick);
+
+    var bookSel = menuSel([], item.bookSlot == null ? '' : String(item.bookSlot), '不关联');
+
+    mask.querySelector('.ne-row1').appendChild(catSel.el);
+    mask.querySelector('.ne-row1').appendChild(subWrap);
+    mask.querySelector('.ne-row2').appendChild(bookSel.el);
+
+    var tagsInput = document.createElement('input');
+    tagsInput.type = 'text';
+    tagsInput.className = 'ne-tags';
+    tagsInput.placeholder = '标签，用中文逗号分隔（可留空）';
+    tagsInput.value = (item.tags || []).join('，');
+    mask.querySelector('.ne-row2').appendChild(tagsInput);
+
+    function fillBooks() {
+      var cat = catSel.value, sub = (subInput.value || '').trim();
+      var list = (typeof booksFn === 'function') ? (booksFn(cat, '') || []) : [];
+      list = list.slice().sort(function (a, b) { return a.slot - b.slot; });
+      var items = [{ v: '', t: '不关联' }];
+      list.forEach(function (b) {
+        var star = sub && b.subcat === sub;
+        items.push({ v: String(b.slot), t: (star ? '★ ' : '📖 ') + (b.title || ('第' + b.slot + '本')) + (b.subcat ? ' · ' + b.subcat : '') });
+      });
+      if (!list.length) items.push({ v: '', t: '这个分类下还没有书', disabled: true });
+      bookSel.setItems(items);
+    }
+    function fillSubcats() {
+      var subs = (typeof subcatsFn === 'function') ? (subcatsFn(catSel.value) || []) : [];
+      subPick.disabled = !subs.length;
+      subPick.style.opacity = subs.length ? '' : '.35';
+      subPick.onclick = function (e) {
+        e.stopPropagation();
+        openPicker(subWrap, subs, function (v) { subInput.value = v; fillBooks(); });
+      };
+    }
+
+    catSel.onChange = function () { fillSubcats(); fillBooks(); };
+    subInput.addEventListener('input', function () { fillBooks(); });
+
+    fillSubcats();
+    fillBooks();
+    bookSel.setValue(item.bookSlot == null ? '' : String(item.bookSlot));
 
     document.body.appendChild(mask);
     cur = { id: String(id), mask: mask };
 
-    function grow() { ta.style.height = 'auto'; ta.style.height = Math.max(180, ta.scrollHeight + 2) + 'px'; }
+    function grow() { ta.style.height = 'auto'; ta.style.height = Math.max(160, ta.scrollHeight + 2) + 'px'; }
     grow();
     ta.addEventListener('input', grow);
     setTimeout(function () { ta.focus(); try { ta.setSelectionRange(ta.value.length, ta.value.length); } catch (e) {} }, 30);
@@ -8344,18 +8522,21 @@ textarea.ta-grow{
       var s2 = st();
       if (!s2 || !Array.isArray(s2.snippets)) return;
       var next = JSON.parse(JSON.stringify(s2));
-      var it = null;
-      for (var k = 0; k < next.snippets.length; k++) if (String(next.snippets[k].id) === String(id)) { it = next.snippets[k]; break; }
+      var it = null, k;
+      for (k = 0; k < next.snippets.length; k++) if (String(next.snippets[k].id) === String(id)) { it = next.snippets[k]; break; }
       if (!it) { toastIf('这条随手记已不存在'); close(); return; }
       it.text = text;
-      it.tags = mask.querySelector('.ne-tags').value
-        .split(/[,，、\s]+/).map(function (x) { return x.trim(); }).filter(Boolean).slice(0, 12);
+      it.cat = catSel.value || 'other';
+      var sub = (subInput.value || '').trim();
+      if (sub) it.subcat = sub; else delete it.subcat;
+      var bv = bookSel.value;
+      if (bv === '') delete it.bookSlot; else it.bookSlot = +bv;
+      it.tags = tagsInput.value.split(/[,，、\s]+/).map(function (x) { return x.trim(); }).filter(Boolean).slice(0, 12);
       it.edited = new Date().toISOString();
-      var commit = fn('commitState');
-      var render = fn('render');
+      var commit = glob('commitState'), render = glob('render');
       try {
-        if (commit) commit(next);
-        if (render) render();
+        if (typeof commit === 'function') commit(next);
+        if (typeof render === 'function') render();
       } catch (e) { toastIf('保存失败：' + e.message); return; }
       close();
       toastIf('已保存修改');
