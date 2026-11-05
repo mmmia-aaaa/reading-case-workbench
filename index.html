@@ -990,8 +990,12 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:44px;lette
 body.te-open .mobile-burger{display:none !important}
 
 </style>
-<style id="review-cats-css">
-.rvcat-tag{display:inline-block;margin-left:6px;font-size:11px;padding:0 6px;line-height:1.6;border-radius:6px;background:rgba(255,255,255,.08);color:var(--muted,#9a8d7c)}
+<style id="cat-plus-css">
+/* 分类管理增强：内置标记 */
+.catm-row{align-items:center}
+.catm-row .cp-tag{font-size:11px;line-height:1;padding:3px 6px;border-radius:6px;background:rgba(199,155,107,.16);color:#d9b98d;margin-left:8px;flex:0 0 auto}
+.catm-row .catm-actions{margin-left:auto;display:flex;gap:6px;flex:0 0 auto}
+#catModal{z-index:120}
 
 </style>
 </head>
@@ -7948,160 +7952,308 @@ textarea.ta-grow{
 })();
 
 </script>
-<script id="review-cats-js">
-/* 复盘分类：让内置分类也能重命名 / 删除（管理入口替换为自定义列表） */
+<script id="cat-plus-js">
+/* 分类管理增强：内置分类也能改名（复盘 / 书籍 / 案例领域 / 选题细分） */
 (function () {
   'use strict';
 
   function st() {
-    try { var s = (0, eval)('typeof state !== "undefined" ? state : null'); if (s && typeof s === 'object') return s; } catch (e) {}
-    return null;
+    try { var s = (0, eval)('typeof state !== "undefined" ? state : null'); return (s && typeof s === 'object') ? s : null; } catch (e) { return null; }
   }
-  function fn(name) {
-    try { return (0, eval)('typeof ' + name + ' === "function" ? ' + name + ' : null'); } catch (e) { return null; }
+  function gv(expr, fallback) {
+    try { var v = (0, eval)(expr); return (v === undefined || v === null) ? fallback : v; } catch (e) { return fallback; }
   }
+  function fn(name) { try { return (0, eval)('typeof ' + name + ' === "function" ? ' + name + ' : null'); } catch (e) { return null; } }
   function toastIf(m) { var t = fn('toast'); if (t) { try { t(m); } catch (e) {} } }
+  function callIf(name) { var f = fn(name); if (f) { try { f(); } catch (e) {} } }
   function esc(v) {
     return String(v == null ? '' : v).replace(/[&<>"]/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
     });
   }
-  function baseList(s) {
-    if (!Array.isArray(s.reviewCatsBase)) {
-      var rc = null;
-      try { rc = (0, eval)('typeof REVIEW_CATS !== "undefined" ? REVIEW_CATS : null'); } catch (e) {}
-      s.reviewCatsBase = rc ? rc.slice() : [];
+  function $id(id) { return document.getElementById(id); }
+
+  var TITLES = { review: '管理复盘分类', book: '管理书籍分类', tip: '管理每日知识分类', domain: '管理案例领域', topic: '管理选题细分' };
+
+  /* --- 内置分类基线：首次运行时从常量抓一份；改名结果单独存 localStorage（normalizeState 会丢掉未知字段） --- */
+  var LS_KEY = 'wb_cat_plus_v1';
+  function loadSaved() {
+    try { return JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch (e) { return null; }
+  }
+  function saveSaved(b) {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(b)); } catch (e) {}
+  }
+  function base() {
+    var s = st();
+    if (!s) return null;
+    if (!s.catBase || typeof s.catBase !== 'object') {
+      s.catBase = loadSaved() || {};
     }
-    return s.reviewCatsBase;
+    var b = s.catBase;
+    if (!Array.isArray(b.review)) b.review = gv('REVIEW_CATS', []).slice();
+    if (!Array.isArray(b.domain)) b.domain = gv('CASE_DOMAINS', []).slice();
+    if (!b.topics || typeof b.topics !== 'object') {
+      var T = gv('TOPICS', {});
+      var out = {};
+      Object.keys(T || {}).forEach(function (k) { out[k] = (T[k] || []).slice(); });
+      b.topics = out;
+    }
+    if (!b.bookLabels || typeof b.bookLabels !== 'object') b.bookLabels = {};
+    return b;
+  }
+  function bookBase() { return gv('BOOK_CATS', []); }
+
+  /* --- 覆盖内置取数函数 --- */
+  function installAccessors() {
+    try {
+      window.allReviewCats = function () {
+        var s = st(); var b = (s && s.catBase && Array.isArray(s.catBase.review)) ? s.catBase.review : gv('REVIEW_CATS', []);
+        return [].concat(b, (s && s.reviewCats) || []);
+      };
+      window.allDomains = function () {
+        var s = st(); var b = (s && s.catBase && Array.isArray(s.catBase.domain)) ? s.catBase.domain : gv('CASE_DOMAINS', []);
+        return [].concat(b, (s && s.caseDomains) || []);
+      };
+      window.allCaseTopicsFor = function (domain) {
+        var s = st();
+        var bt = (s && s.catBase && s.catBase.topics) ? s.catBase.topics : (gv('TOPICS', {}) || {});
+        var presets = domain ? (bt[domain] || []) : Object.keys(bt).reduce(function (a, k) { return a.concat(bt[k] || []); }, []);
+        var custom = ((s && s.caseTopics) || []).filter(function (t) { return domain ? t.domain === domain : true; }).map(function (t) { return t.name; });
+        return Array.from(new Set([].concat(presets, custom)));
+      };
+    } catch (e) {}
   }
 
-  // 1) 初始化 + 让 allReviewCats 读得到「内置列表」
-  var s0 = st();
-  if (s0) baseList(s0);
-  try {
-    (0, eval)('allReviewCats = function(){ var b = (typeof state !== "undefined" && Array.isArray(state.reviewCatsBase)) ? state.reviewCatsBase : []; var c = (typeof state !== "undefined" && Array.isArray(state.reviewCats)) ? state.reviewCats : []; return b.concat(c); };');
-  } catch (e) {}
-
-  function combined() {
+  /* 把 state 里保存的书籍分类改名应用到常量表（只在内存里改 label，key 不动） */
+  function applyBookLabels() {
     var s = st();
-    if (!s) return [];
-    return baseList(s).concat(Array.isArray(s.reviewCats) ? s.reviewCats : []);
+    var labels = (s && s.catBase && s.catBase.bookLabels) || {};
+    bookBase().forEach(function (c) { if (labels[c.key]) c.label = labels[c.key]; });
   }
 
-  // 2) 把「管理分类…」换成内置+自定义全都能改的列表
-  function paintManager() {
-    var box = document.getElementById('catManageList');
-    if (!box) return;
+  /* --- 行渲染 --- */
+  function rowsOf(kind) {
     var s = st();
-    if (!s) return;
-    var base = baseList(s);
-    var custom = Array.isArray(s.reviewCats) ? s.reviewCats : [];
-    function row(name, kind, idx, builtin) {
-      return '<div class="catm-row"><span class="catm-name">' + esc(name) +
-        (builtin ? '<span class="rvcat-tag">内置</span>' : '') + '</span>' +
+    var out = [];
+    if (kind === 'review') {
+      var b = base();
+      (b.review || []).forEach(function (n, i) { out.push({ name: n, builtin: true, idx: i }); });
+      ((s && s.reviewCats) || []).forEach(function (n, i) { out.push({ name: n, builtin: false, idx: i }); });
+    } else if (kind === 'book') {
+      bookBase().forEach(function (c, i) { out.push({ name: c.label, builtin: true, idx: i, key: c.key }); });
+      ((s && s.bookCats) || []).forEach(function (c, i) { out.push({ name: c.label, builtin: false, idx: i, key: c.key }); });
+    } else if (kind === 'domain') {
+      var bd = base();
+      (bd.domain || []).forEach(function (n, i) { out.push({ name: n, builtin: true, idx: i }); });
+      ((s && s.caseDomains) || []).forEach(function (n, i) { out.push({ name: n, builtin: false, idx: i }); });
+    } else if (kind === 'topic') {
+      var bt = base().topics || {};
+      Object.keys(bt).forEach(function (dom) {
+        (bt[dom] || []).forEach(function (n, i) { out.push({ name: dom + ' → ' + n, dom: dom, plain: n, builtin: true, idx: i }); });
+      });
+      ((s && s.caseTopics) || []).forEach(function (t, i) { out.push({ name: t.domain + ' → ' + t.name, dom: t.domain, plain: t.name, builtin: false, idx: i }); });
+    } else if (kind === 'tip') {
+      var btp = base();
+      return null; /* 每日知识由 tip-edit 自己的菜单管理 */
+    }
+    return out;
+  }
+
+  function render(kind) {
+    var list = rowsOf(kind);
+    if (list === null) return false;
+    var box = $id('catManageList');
+    if (!box) return false;
+    if (!list.length) {
+      box.innerHTML = '<p style="color:var(--muted);margin:4px 0">还没有分类，先去「新建分类」添加</p>';
+      return true;
+    }
+    box.innerHTML = list.map(function (r, i) {
+      var del = r.builtin && kind === 'book' ? '' :
+        '<button class="btn small" data-cpact="del" data-cpkind="' + kind + '" data-cpbuiltin="' + (r.builtin ? '1' : '') + '" data-cpidx="' + r.idx + '" data-cpdom="' + esc(r.dom || '') + '" style="color:#e06c75">删除</button>';
+      return '<div class="catm-row"><span class="catm-name">' + esc(r.name) + '</span>' +
+        (r.builtin ? '<span class="cp-tag">内置</span>' : '') +
         '<span class="catm-actions">' +
-        '<button class="btn small" data-rvact="rename" data-rvkind="' + kind + '" data-rvidx="' + idx + '">重命名</button>' +
-        '<button class="btn small" data-rvact="del" data-rvkind="' + kind + '" data-rvidx="' + idx + '" style="color:#e06c75">删除</button>' +
+          '<button class="btn small" data-cpact="rename" data-cpkind="' + kind + '" data-cpbuiltin="' + (r.builtin ? '1' : '') + '" data-cpidx="' + r.idx + '" data-cpdom="' + esc(r.dom || '') + '">重命名</button>' +
+          del +
         '</span></div>';
-    }
-    var html = '';
-    base.forEach(function (n, i) { html += row(n, 'base', i, true); });
-    custom.forEach(function (n, i) { html += row(n, 'custom', i, false); });
-    if (!html) html = '<p style="color:var(--muted);margin:4px 0">还没有分类</p>';
-    box.innerHTML = html;
-    var t = document.getElementById('catModalTitle');
-    if (t) t.textContent = '管理复盘分类（内置的也能改名 / 删除）';
+    }).join('');
+    return true;
   }
 
-  function refreshSelect() {
-    var f = fn('fillReviewCatSelect');
-    if (f) { try { f(''); } catch (e) {} }
-    var r = fn('render');
-    if (r) { try { r(); } catch (e) {} }
+  function refreshSelects(kind) {
+    try {
+      if (kind === 'review') { var r = fn('fillReviewCatSelect'); if (r) r(''); }
+      if (kind === 'domain') { var d = fn('fillDomainSelect'); if (d) d($id('cDomain')); }
+      if (kind === 'topic') { var t = fn('fillTopicSelect'); if (t) t($id('cTopic'), ($id('cDomain') || {}).value || '', ''); }
+      if (kind === 'book') { var b = fn('fillBookCatSelect'); if (b) b(); }
+    } catch (e) {}
   }
 
-  function doRename(kind, idx) {
+  function afterChange(kind, next) {
+    saveSaved(next.catBase || {});
+    var commit = fn('commitState');
+    try { if (commit) commit(next); } catch (e) { toastIf('保存失败：' + e.message); return false; }
+    if (kind === 'book') applyBookLabels();
+    refreshSelects(kind);
+    var r = fn('render'); if (r) { try { r(); } catch (e) {} }
+    render(kind);
+    return true;
+  }
+
+  var backupCounter = 0;
+
+  function doRename(kind, builtin, idx, dom) {
     var s = st();
     if (!s) return;
-    var arr = kind === 'base' ? baseList(s) : s.reviewCats;
-    if (!Array.isArray(arr) || arr[idx] === undefined) return;
-    var oldName = arr[idx];
-    var newName = (window.prompt('新的分类名称', oldName) || '').trim();
-    if (!newName || newName === oldName) return;
-    if (combined().indexOf(newName) >= 0) { toastIf('该分类已存在'); return; }
     var next = JSON.parse(JSON.stringify(s));
-    var a2 = kind === 'base' ? baseList(next) : next.reviewCats;
-    a2[idx] = newName;
-    (next.reviews || []).forEach(function (rv) { if (rv.cat === oldName) rv.cat = newName; });
-    try {
-      var c = fn('commitState');
-      if (c) c(next);
-      else s.reviewCats = next.reviewCats;
-    } catch (e) { toastIf('重命名失败：' + e.message); return; }
-    try { (0, eval)('if (typeof reviewCat === "string" && reviewCat === ' + JSON.stringify(oldName) + ') reviewCat = ' + JSON.stringify(newName) + ';'); } catch (e) {}
-    toastIf('已重命名为「' + newName + '」');
-    paintManager();
-    refreshSelect();
+    base();
+    var T = next.catBase = next.catBase || {};
+
+    if (kind === 'review') {
+      var arrR = builtin ? T.review : (next.reviewCats || []);
+      var old = arrR[idx];
+      if (old == null) return;
+      var nn = (prompt('新分类名称', old) || '').trim();
+      if (!nn || nn === old) return;
+      if (window.allReviewCats && window.allReviewCats().indexOf(nn) >= 0) { toastIf('该分类已存在'); return; }
+      arrR[idx] = nn;
+      (next.reviews || []).forEach(function (rv) { if (rv.cat === old) rv.cat = nn; });
+      if (!builtin) next.reviewCats = arrR;
+      if (afterChange(kind, next)) toastIf('分类已重命名');
+      return;
+    }
+
+    if (kind === 'book') {
+      var bk = builtin ? bookBase()[idx] : (next.bookCats || [])[idx];
+      if (!bk) return;
+      var nb = (prompt('新分类名称', bk.label) || '').trim();
+      if (!nb || nb === bk.label) return;
+      var dup = bookBase().some(function (c) { return c.label === nb && c.key !== bk.key; });
+      if (dup) { toastIf('该分类已存在'); return; }
+      if (builtin) { T.bookLabels = T.bookLabels || {}; T.bookLabels[bk.key] = nb; }
+      else { bk.label = nb; }
+      if (afterChange(kind, next)) toastIf('分类已重命名');
+      return;
+    }
+
+    if (kind === 'domain') {
+      var arrD = builtin ? T.domain : (next.caseDomains || []);
+      var od = arrD[idx];
+      if (od == null) return;
+      var nd = (prompt('新领域名称', od) || '').trim();
+      if (!nd || nd === od) return;
+      if (window.allDomains && window.allDomains().indexOf(nd) >= 0) { toastIf('该领域已存在'); return; }
+      arrD[idx] = nd;
+      (next.cases || []).forEach(function (c) { if (c.domain === od) c.domain = nd; });
+      var bt = T.topics || {};
+      if (bt[od]) { bt[nd] = bt[od]; delete bt[od]; }
+      (next.caseTopics || []).forEach(function (t) { if (t.domain === od) t.domain = nd; });
+      if (!builtin) next.caseDomains = arrD;
+      if (afterChange(kind, next)) toastIf('领域已重命名');
+      return;
+    }
+
+    if (kind === 'topic') {
+      var arr = builtin ? ((T.topics || {})[dom] || []) : (next.caseTopics || []);
+      var item = arr[idx];
+      if (item == null) return;
+      var curName = builtin ? item : item.name;
+      var nt = (prompt('新选题名称', curName) || '').trim();
+      if (!nt || nt === curName) return;
+      var exist = (window.allCaseTopicsFor ? window.allCaseTopicsFor(dom) : []);
+      if (exist.indexOf(nt) >= 0) { toastIf('该选题已存在'); return; }
+      if (builtin) { T.topics[dom] = arr; arr[idx] = nt; }
+      else { item.name = nt; }
+      (next.cases || []).forEach(function (c) { if (c.domain === dom && c.topic === curName) c.topic = nt; });
+      if (!builtin) next.caseTopics = arr;
+      if (afterChange(kind, next)) toastIf('选题已重命名');
+      return;
+    }
   }
 
-  function doDelete(kind, idx) {
+  function doDelete(kind, builtin, idx, dom) {
     var s = st();
     if (!s) return;
-    var arr = kind === 'base' ? baseList(s) : s.reviewCats;
-    if (!Array.isArray(arr) || arr[idx] === undefined) return;
-    var oldName = arr[idx];
-    if (!window.confirm('删除分类「' + oldName + '」？该分类下的复盘会归到「未分类」。')) return;
     var next = JSON.parse(JSON.stringify(s));
-    var a2 = kind === 'base' ? baseList(next) : next.reviewCats;
-    a2.splice(idx, 1);
-    (next.reviews || []).forEach(function (rv) { if (rv.cat === oldName) rv.cat = ''; });
-    try {
-      var c = fn('commitState');
-      if (c) c(next);
-    } catch (e) { toastIf('删除失败：' + e.message); return; }
-    try { (0, eval)('if (typeof reviewCat === "string" && reviewCat === ' + JSON.stringify(oldName) + ') reviewCat = "";'); } catch (e) {}
-    toastIf('已删除分类「' + oldName + '」');
-    paintManager();
-    refreshSelect();
+    base();
+    var T = next.catBase = next.catBase || {};
+    if (!confirm('删除该分类？其下的记录会归到默认分类')) return;
+
+    if (kind === 'review') {
+      var arrR = builtin ? T.review : (next.reviewCats || []);
+      var old = arrR[idx];
+      if (old == null) return;
+      arrR.splice(idx, 1);
+      (next.reviews || []).forEach(function (rv) { if (rv.cat === old) rv.cat = ''; });
+      if (!builtin) next.reviewCats = arrR;
+    } else if (kind === 'domain') {
+      var arrD = builtin ? T.domain : (next.caseDomains || []);
+      var od = arrD[idx];
+      if (od == null) return;
+      arrD.splice(idx, 1);
+      (next.cases || []).forEach(function (c) { if (c.domain === od) c.domain = '其他'; });
+      var bt = T.topics || {};
+      delete bt[od];
+      if (Array.isArray(next.caseTopics)) next.caseTopics = next.caseTopics.filter(function (t) { return t.domain !== od; });
+      if (!builtin) next.caseDomains = arrD;
+    } else if (kind === 'topic') {
+      var arr = builtin ? ((T.topics || {})[dom] || []) : (next.caseTopics || []);
+      var item = arr[idx];
+      if (item == null) return;
+      var nm = builtin ? item : item.name;
+      arr.splice(idx, 1);
+      (next.cases || []).forEach(function (c) { if (c.domain === dom && c.topic === nm) c.topic = ''; });
+      if (!builtin) next.caseTopics = arr;
+    }
+    if (afterChange(kind, next)) toastIf('分类已删除');
   }
 
-  // 3) 拦截「管理分类…」
-  document.addEventListener('change', function (e) {
-    var el = e.target;
-    if (!el || el.id !== 'rvCat') return;
-    if (el.value !== '__manage__') return;
-    e.stopPropagation();
-    e.stopImmediatePropagation();
-    var om = fn('openCatManager');
-    if (!om) return;
-    om('review');
-    paintManager();
-    var cm = document.getElementById('catModal');
-    if (cm) {
-      cm.style.zIndex = '120';
-      if (!cm.__rvWatch) {
-        cm.__rvWatch = true;
-        new MutationObserver(function () {
-          if (cm.hidden) cm.style.zIndex = '';
-        }).observe(cm, { attributes: true, attributeFilter: ['hidden'] });
-      }
+  /* --- 接管分类管理弹窗 --- */
+  function openManager(kind) {
+    if (kind === 'tip') { var f = gv('__origOpenCatManager', null); if (f) { f('tip'); return; } render('tip'); }
+    var title = $id('catModalTitle');
+    if (title) title.textContent = TITLES[kind] || '管理分类';
+    base(); applyBookLabels();
+    render(kind);
+    var modal = $id('catModal');
+    if (modal) modal.hidden = false;
+  }
+
+  function boot() {
+    base();
+    installAccessors();
+    applyBookLabels();
+    try { window.__origOpenCatManager = window.openCatManager; } catch (e) {}
+    window.openCatManager = openManager;
+
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-cpact]');
+      if (!b) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      var kind = b.getAttribute('data-cpkind');
+      var builtin = b.getAttribute('data-cpbuiltin') === '1';
+      var idx = Number(b.getAttribute('data-cpidx'));
+      var dom = b.getAttribute('data-cpdom') || '';
+      if (b.getAttribute('data-cpact') === 'rename') doRename(kind, builtin, idx, dom);
+      else doDelete(kind, builtin, idx, dom);
+    }, true);
+
+    /* 弹窗内的分类管理，避免被下层弹窗盖住 */
+    var modal = $id('catModal');
+    if (modal) {
+      new MutationObserver(function () {
+        if (!modal.hidden) modal.style.zIndex = '120';
+        else modal.style.zIndex = '';
+      }).observe(modal, { attributes: true, attributeFilter: ['hidden'] });
     }
-    try { el.value = ''; } catch (err) {}
-  }, true);
 
-  // 4) 行内按钮
-  document.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-rvact]');
-    if (!b) return;
-    e.stopPropagation();
-    var act = b.getAttribute('data-rvact');
-    var kind = b.getAttribute('data-rvkind');
-    var idx = Number(b.getAttribute('data-rvidx'));
-    if (act === 'rename') doRename(kind, idx);
-    else if (act === 'del') doDelete(kind, idx);
-  }, true);
+    var r = fn('render'); if (r) { try { r(); } catch (e) {} }
+  }
 
-  window.__wbReviewCatsRefresh = paintManager;
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 })();
 
 </script>
