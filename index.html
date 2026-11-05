@@ -947,8 +947,8 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:44px;lette
 
 </style>
 <style id="tip-edit-css">
-.te-mask{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px}
-.te-modal{width:min(760px,100%);max-height:86vh;display:flex;flex-direction:column;background:var(--card,#2b241d);border:1px solid var(--line,#3a3128);border-radius:14px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.te-mask{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:45;padding:16px}
+.te-modal{color-scheme:dark;width:min(760px,100%);max-height:86vh;display:flex;flex-direction:column;background:var(--card,#2b241d);border:1px solid var(--line,#3a3128);border-radius:14px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.5)}
 .te-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line,#3a3128)}
 .te-title{font-weight:600;font-size:15px}
 .te-sub{font-size:12px;opacity:.6}
@@ -956,9 +956,20 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:44px;lette
 .te-body{padding:14px 16px;overflow:auto;display:flex;flex-direction:column;gap:10px;flex:1 1 auto;min-height:0}
 .te-modal .te-body textarea.te-text{width:100%;min-height:240px !important;font:inherit;font-size:15px;line-height:1.75;padding:12px 14px;border-radius:10px;border:1px solid var(--line,#3a3128);background:rgba(0,0,0,.18);color:inherit;resize:vertical}
 .te-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.te-row select,.te-row input[type=text]{padding:8px 10px;border-radius:8px;border:1px solid var(--line,#3a3128);background:rgba(0,0,0,.18);color:inherit;font:inherit;font-size:13px}
-.te-row select{min-width:110px;width:auto;flex:0 0 auto}
-.te-row input[type=text]{flex:1 1 240px;width:auto;min-width:0}
+
+/* 分类：自绘下拉，避免系统菜单白底浅字看不清 */
+.te-catwrap{position:relative}
+.te-catbtn{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:150px;padding:8px 12px;border-radius:8px;border:1px solid var(--line,#3a3128);background:#332b22;color:#efe3d3;font:inherit;font-size:13px;cursor:pointer}
+.te-catbtn::after{content:'▾';font-size:13px;line-height:1;opacity:.6}
+.te-catmenu{position:fixed;z-index:60;min-width:230px;max-height:300px;overflow:auto;background:#2b241d;border:1px solid var(--line,#3a3128);border-radius:10px;padding:6px;box-shadow:0 16px 36px rgba(0,0,0,.5)}
+.te-catmenu[hidden]{display:none}
+.te-catmenu button{display:block;width:100%;text-align:left;background:none;border:0;color:#efe3d3;font:inherit;font-size:13px;padding:7px 10px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.te-catmenu button:hover{background:rgba(255,255,255,.09)}
+.te-catmenu button.on{color:#e2c088;font-weight:600}
+.te-catmenu .te-sep{height:1px;background:var(--line,#3a3128);margin:6px 4px}
+.te-catmenu .te-new{color:#cbbb9f}
+
+.te-row input[type=text]{padding:8px 10px;border-radius:8px;border:1px solid var(--line,#3a3128);background:rgba(0,0,0,.18);color:inherit;font:inherit;font-size:13px;flex:1 1 240px;width:auto;min-width:0}
 .te-hint{font-size:12px;opacity:.55}
 .te-foot{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line,#3a3128);justify-content:flex-end;align-items:center}
 .te-foot .te-del{margin-right:auto;color:#e3a1a1}
@@ -973,7 +984,14 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:44px;lette
   .te-modal{width:100%;max-height:100%;border-radius:0;height:100%}
   .te-modal .te-body textarea.te-text{min-height:38vh !important;font-size:16px}
   .te-row input[type=text]{min-width:0;width:100%;flex:1 1 100%}
+  .te-catmenu{min-width:min(260px,calc(100vw - 40px))}
 }
+
+body.te-open .mobile-burger{display:none !important}
+
+</style>
+<style id="review-cats-css">
+.rvcat-tag{display:inline-block;margin-left:6px;font-size:11px;padding:0 6px;line-height:1.6;border-radius:6px;background:rgba(255,255,255,.08);color:var(--muted,#9a8d7c)}
 
 </style>
 </head>
@@ -7689,7 +7707,7 @@ textarea.ta-grow{
 
 </script>
 <script id="tip-edit-js">
-/* 知识卡：弹窗编辑（正文 / 分类 / 来源） */
+/* 知识卡：弹窗编辑（正文 / 分类 / 来源），分类菜单自带「新建」「管理」 */
 (function () {
   'use strict';
 
@@ -7722,6 +7740,7 @@ textarea.ta-grow{
 
   function close() {
     if (cur && cur.mask && cur.mask.parentNode) cur.mask.parentNode.removeChild(cur.mask);
+    document.body.classList.remove('te-open');
     cur = null;
   }
 
@@ -7732,12 +7751,6 @@ textarea.ta-grow{
     for (var i = 0; i < s.tips.length; i++) if (String(s.tips[i].id) === String(id)) { tip = s.tips[i]; break; }
     if (!tip) { toastIf('这条知识已不存在'); return null; }
 
-    var opts = cats().map(function (c) {
-      var on = (c === (tip.cat || '其他')) ? ' selected' : '';
-      return '<option' + on + '>' + esc(c) + '</option>';
-    }).join('');
-    if (!tip.cat) opts = '<option selected disabled>分类</option>' + opts;
-
     var mask = document.createElement('div');
     mask.className = 'te-mask';
     mask.innerHTML =
@@ -7747,8 +7760,11 @@ textarea.ta-grow{
           '<button type="button" class="te-x" aria-label="关闭">×</button></div>' +
         '<div class="te-body">' +
           '<textarea class="te-text" spellcheck="false"></textarea>' +
-          '<div class="te-row"><select class="te-cat">' + opts + '</select>' +
-            '<input type="text" class="te-src" placeholder="来源（可选，如：塔罗师案例课 03）"></div>' +
+          '<div class="te-row">' +
+            '<div class="te-catwrap"><button type="button" class="te-catbtn"></button>' +
+              '<div class="te-catmenu" hidden></div></div>' +
+            '<input type="text" class="te-src" placeholder="来源（可选，如：塔罗师案例课 03）">' +
+          '</div>' +
           '<div class="te-hint">换行和空行会原样保留 · Ctrl + Enter 保存 · Esc 取消</div>' +
         '</div>' +
         '<div class="te-foot">' +
@@ -7759,10 +7775,102 @@ textarea.ta-grow{
       '</div>';
 
     var ta = mask.querySelector('.te-text');
+    var src = mask.querySelector('.te-src');
+    var btn = mask.querySelector('.te-catbtn');
+    var menu = mask.querySelector('.te-catmenu');
     ta.value = tip.text || '';
-    mask.querySelector('.te-src').value = tip.source || '';
+    src.value = tip.source || '';
 
+    var catVal = tip.cat || '其他';
+
+    function paintBtn() { btn.textContent = catVal || '分类'; }
+
+    function renderMenu() {
+      var list = cats();
+      var html = list.map(function (c) {
+        return '<button type="button" data-val="' + esc(c) + '"' + (c === catVal ? ' class="on"' : '') + '>' +
+          esc(c) + (c === catVal ? ' ✓' : '') + '</button>';
+      }).join('');
+      html += '<div class="te-sep"></div>' +
+        '<button type="button" class="te-new" data-act="new">＋ 新建分类…</button>' +
+        '<button type="button" class="te-new" data-act="manage">管理分类（重命名 / 删除）…</button>';
+      menu.innerHTML = html;
+    }
+
+    function openMenu() {
+      renderMenu();
+      var r = btn.getBoundingClientRect();
+      menu.hidden = false;
+      menu.style.left = Math.round(r.left) + 'px';
+      menu.style.minWidth = Math.max(230, Math.round(r.width)) + 'px';
+      var h = menu.offsetHeight;
+      var top = r.bottom + 6;
+      if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 6);
+      menu.style.top = Math.round(top) + 'px';
+    }
+    function closeMenu() { menu.hidden = true; }
+
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      menu.hidden ? openMenu() : closeMenu();
+    });
+
+    menu.addEventListener('click', function (e) {
+      var b = e.target.closest('button');
+      if (!b) return;
+      e.stopPropagation();
+      var act = b.getAttribute('data-act');
+      if (!act) {
+        catVal = b.getAttribute('data-val');
+        paintBtn();
+        closeMenu();
+        return;
+      }
+      if (act === 'new') {
+        var name = (window.prompt('新分类名称', '') || '').trim();
+        if (!name) { closeMenu(); return; }
+        if (cats().indexOf(name) >= 0) { toastIf('该分类已存在'); catVal = name; paintBtn(); closeMenu(); return; }
+        var s0 = st();
+        if (!s0) return;
+        var n0 = JSON.parse(JSON.stringify(s0));
+        if (!Array.isArray(n0.tipCats)) n0.tipCats = [];
+        n0.tipCats.push(name);
+        try { var c0 = fn('commitState'); if (c0) c0(n0); }
+        catch (err) { toastIf('新建失败：' + err.message); return; }
+        catVal = name;
+        paintBtn();
+        closeMenu();
+        toastIf('已新建分类「' + name + '」');
+        return;
+      }
+      if (act === 'manage') {
+        closeMenu();
+        var om = fn('openCatManager');
+        if (om) {
+          om('tip');
+          var cm = document.getElementById('catModal');
+          if (cm && !cm.__teWatch) {
+            cm.__teWatch = true;
+            new MutationObserver(function () {
+              if (cm.hidden && cur && cur.mask) {
+                var c = st(), t2 = null;
+                if (c && Array.isArray(c.tips)) c.tips.forEach(function (x) { if (String(x.id) === String(cur.id)) t2 = x; });
+                if (t2 && t2.cat) catVal = t2.cat;
+                paintBtn();
+              }
+            }).observe(cm, { attributes: true, attributeFilter: ['hidden'] });
+          }
+        }
+      }
+    });
+
+    document.addEventListener('click', function (e) {
+      if (!menu.hidden && !menu.contains(e.target) && e.target !== btn) closeMenu();
+    }, true);
+
+    paintBtn();
     document.body.appendChild(mask);
+    document.body.classList.add('te-open');
     cur = { id: String(id), mask: mask };
 
     function grow() { ta.style.height = 'auto'; ta.style.height = Math.max(200, ta.scrollHeight + 2) + 'px'; }
@@ -7780,8 +7888,8 @@ textarea.ta-grow{
       for (var j = 0; j < next.tips.length; j++) if (String(next.tips[j].id) === String(id)) { it = next.tips[j]; break; }
       if (!it) { toastIf('这条知识已不存在'); close(); return; }
       it.text = text;
-      it.cat = mask.querySelector('.te-cat').value;
-      it.source = mask.querySelector('.te-src').value.trim();
+      it.cat = catVal;
+      it.source = src.value.trim();
       it.edited = new Date().toISOString();
       var commit = fn('commitState');
       var render = fn('render');
@@ -7813,27 +7921,187 @@ textarea.ta-grow{
     mask.querySelector('.te-cancel').addEventListener('click', close);
     mask.querySelector('.te-x').addEventListener('click', close);
     mask.querySelector('.te-del').addEventListener('click', del);
-    mask.addEventListener('mousedown', function (e) { if (e.target === mask) close(); });
+    mask.addEventListener('mousedown', function (e) {
+      if (e.target === mask) close();
+    });
     ta.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') { e.preventDefault(); close(); }
       else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); save(); }
+      else if (e.key === 'Enter' && !(e.ctrlKey || e.metaKey)) { /* 允许普通换行 */ }
     });
     return cur;
   }
 
   document.addEventListener('click', function (e) {
-    var btn = e.target.closest('[data-edittip]');
-    if (!btn) return;
+    var b = e.target.closest('[data-edittip]');
+    if (!b) return;
     e.preventDefault();
     e.stopPropagation();
-    build(btn.getAttribute('data-edittip'));
+    build(b.getAttribute('data-edittip'));
   }, true);
 
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && cur) close();
+    if (e.key === 'Escape' && cur) { var m = cur.mask && cur.mask.querySelector('.te-catmenu'); if (m && !m.hidden) { m.hidden = true; e.stopPropagation(); } else close(); }
   });
 
   window.__wbEditTip = function (id) { return build(id); };
+})();
+
+</script>
+<script id="review-cats-js">
+/* 复盘分类：让内置分类也能重命名 / 删除（管理入口替换为自定义列表） */
+(function () {
+  'use strict';
+
+  function st() {
+    try { var s = (0, eval)('typeof state !== "undefined" ? state : null'); if (s && typeof s === 'object') return s; } catch (e) {}
+    return null;
+  }
+  function fn(name) {
+    try { return (0, eval)('typeof ' + name + ' === "function" ? ' + name + ' : null'); } catch (e) { return null; }
+  }
+  function toastIf(m) { var t = fn('toast'); if (t) { try { t(m); } catch (e) {} } }
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  function baseList(s) {
+    if (!Array.isArray(s.reviewCatsBase)) {
+      var rc = null;
+      try { rc = (0, eval)('typeof REVIEW_CATS !== "undefined" ? REVIEW_CATS : null'); } catch (e) {}
+      s.reviewCatsBase = rc ? rc.slice() : [];
+    }
+    return s.reviewCatsBase;
+  }
+
+  // 1) 初始化 + 让 allReviewCats 读得到「内置列表」
+  var s0 = st();
+  if (s0) baseList(s0);
+  try {
+    (0, eval)('allReviewCats = function(){ var b = (typeof state !== "undefined" && Array.isArray(state.reviewCatsBase)) ? state.reviewCatsBase : []; var c = (typeof state !== "undefined" && Array.isArray(state.reviewCats)) ? state.reviewCats : []; return b.concat(c); };');
+  } catch (e) {}
+
+  function combined() {
+    var s = st();
+    if (!s) return [];
+    return baseList(s).concat(Array.isArray(s.reviewCats) ? s.reviewCats : []);
+  }
+
+  // 2) 把「管理分类…」换成内置+自定义全都能改的列表
+  function paintManager() {
+    var box = document.getElementById('catManageList');
+    if (!box) return;
+    var s = st();
+    if (!s) return;
+    var base = baseList(s);
+    var custom = Array.isArray(s.reviewCats) ? s.reviewCats : [];
+    function row(name, kind, idx, builtin) {
+      return '<div class="catm-row"><span class="catm-name">' + esc(name) +
+        (builtin ? '<span class="rvcat-tag">内置</span>' : '') + '</span>' +
+        '<span class="catm-actions">' +
+        '<button class="btn small" data-rvact="rename" data-rvkind="' + kind + '" data-rvidx="' + idx + '">重命名</button>' +
+        '<button class="btn small" data-rvact="del" data-rvkind="' + kind + '" data-rvidx="' + idx + '" style="color:#e06c75">删除</button>' +
+        '</span></div>';
+    }
+    var html = '';
+    base.forEach(function (n, i) { html += row(n, 'base', i, true); });
+    custom.forEach(function (n, i) { html += row(n, 'custom', i, false); });
+    if (!html) html = '<p style="color:var(--muted);margin:4px 0">还没有分类</p>';
+    box.innerHTML = html;
+    var t = document.getElementById('catModalTitle');
+    if (t) t.textContent = '管理复盘分类（内置的也能改名 / 删除）';
+  }
+
+  function refreshSelect() {
+    var f = fn('fillReviewCatSelect');
+    if (f) { try { f(''); } catch (e) {} }
+    var r = fn('render');
+    if (r) { try { r(); } catch (e) {} }
+  }
+
+  function doRename(kind, idx) {
+    var s = st();
+    if (!s) return;
+    var arr = kind === 'base' ? baseList(s) : s.reviewCats;
+    if (!Array.isArray(arr) || arr[idx] === undefined) return;
+    var oldName = arr[idx];
+    var newName = (window.prompt('新的分类名称', oldName) || '').trim();
+    if (!newName || newName === oldName) return;
+    if (combined().indexOf(newName) >= 0) { toastIf('该分类已存在'); return; }
+    var next = JSON.parse(JSON.stringify(s));
+    var a2 = kind === 'base' ? baseList(next) : next.reviewCats;
+    a2[idx] = newName;
+    (next.reviews || []).forEach(function (rv) { if (rv.cat === oldName) rv.cat = newName; });
+    try {
+      var c = fn('commitState');
+      if (c) c(next);
+      else s.reviewCats = next.reviewCats;
+    } catch (e) { toastIf('重命名失败：' + e.message); return; }
+    try { (0, eval)('if (typeof reviewCat === "string" && reviewCat === ' + JSON.stringify(oldName) + ') reviewCat = ' + JSON.stringify(newName) + ';'); } catch (e) {}
+    toastIf('已重命名为「' + newName + '」');
+    paintManager();
+    refreshSelect();
+  }
+
+  function doDelete(kind, idx) {
+    var s = st();
+    if (!s) return;
+    var arr = kind === 'base' ? baseList(s) : s.reviewCats;
+    if (!Array.isArray(arr) || arr[idx] === undefined) return;
+    var oldName = arr[idx];
+    if (!window.confirm('删除分类「' + oldName + '」？该分类下的复盘会归到「未分类」。')) return;
+    var next = JSON.parse(JSON.stringify(s));
+    var a2 = kind === 'base' ? baseList(next) : next.reviewCats;
+    a2.splice(idx, 1);
+    (next.reviews || []).forEach(function (rv) { if (rv.cat === oldName) rv.cat = ''; });
+    try {
+      var c = fn('commitState');
+      if (c) c(next);
+    } catch (e) { toastIf('删除失败：' + e.message); return; }
+    try { (0, eval)('if (typeof reviewCat === "string" && reviewCat === ' + JSON.stringify(oldName) + ') reviewCat = "";'); } catch (e) {}
+    toastIf('已删除分类「' + oldName + '」');
+    paintManager();
+    refreshSelect();
+  }
+
+  // 3) 拦截「管理分类…」
+  document.addEventListener('change', function (e) {
+    var el = e.target;
+    if (!el || el.id !== 'rvCat') return;
+    if (el.value !== '__manage__') return;
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    var om = fn('openCatManager');
+    if (!om) return;
+    om('review');
+    paintManager();
+    var cm = document.getElementById('catModal');
+    if (cm) {
+      cm.style.zIndex = '120';
+      if (!cm.__rvWatch) {
+        cm.__rvWatch = true;
+        new MutationObserver(function () {
+          if (cm.hidden) cm.style.zIndex = '';
+        }).observe(cm, { attributes: true, attributeFilter: ['hidden'] });
+      }
+    }
+    try { el.value = ''; } catch (err) {}
+  }, true);
+
+  // 4) 行内按钮
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-rvact]');
+    if (!b) return;
+    e.stopPropagation();
+    var act = b.getAttribute('data-rvact');
+    var kind = b.getAttribute('data-rvkind');
+    var idx = Number(b.getAttribute('data-rvidx'));
+    if (act === 'rename') doRename(kind, idx);
+    else if (act === 'del') doDelete(kind, idx);
+  }, true);
+
+  window.__wbReviewCatsRefresh = paintManager;
 })();
 
 </script>
