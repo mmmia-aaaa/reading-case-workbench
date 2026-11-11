@@ -1157,7 +1157,7 @@ body.te-open .mobile-burger{display:none !important}
       </select>
       <select id="filterClient" hidden data-page-node-id="uZSVGlUBD64xgPMMxBoqyU"></select>
       <select id="filterType" hidden data-page-node-id="gCCpolAICqSNROAwHzNCUm">
-        <option data-page-node-id="QYWkykpaBJ2hRCmUkfLHCy">全部类型</option><option data-page-node-id="3R4fZTjhvAtWCTIadwo9iZ">塔罗</option><option>雷诺曼</option><option>马赛</option><option>八字</option><option>六爻</option><option data-page-node-id="l80AJbKuOKgUHGYwN3XjpY">占星</option><option>七政</option><option>占星骰子</option><option>小六壬</option>
+        <option data-page-node-id="QYWkykpaBJ2hRCmUkfLHCy">全部类型</option><option data-page-node-id="3R4fZTjhvAtWCTIadwo9iZ">塔罗</option><option>雷诺曼</option><option>基博卡</option><option>马赛</option><option>八字</option><option>六爻</option><option data-page-node-id="l80AJbKuOKgUHGYwN3XjpY">占星</option><option>七政</option><option>占星骰子</option><option>小六壬</option>
       </select>
       <input type="file" id="fileImport" hidden accept=".json,.zip,.txt,application/json,application/zip,text/plain" data-page-node-id="h1f1ToLE4NE3F3eMXpYJzK">
       <input type="file" id="fileBooks" hidden accept=".pdf,.epub,application/pdf,application/epub+zip" multiple data-page-node-id="uJlOeUEpWfegaMDQWc6KLd">
@@ -1269,7 +1269,7 @@ body.te-open .mobile-burger{display:none !important}
     <div id="caseForm" hidden data-page-node-id="fBJM4vF0c0qYjgvtwuFlUK">
       <div class="row3" data-page-node-id="9r4BLswaxieeWLJKxkBoZ0">
         <div data-page-node-id="GcM7kY2XNee8RC74mYfZ5d"><label data-page-node-id="jvQNWXUJbXHZX9Ahzdehv4">类型</label>
-          <select id="cType" data-page-node-id="6XfvAfR69smycYiKFICc53"><option data-page-node-id="BiQlCjJvbGIWmdASDqBUU7">塔罗</option><option>雷诺曼</option><option>马赛</option><option>八字</option><option>六爻</option><option data-page-node-id="IcxHMePr11cl3V6VuZQXsC">占星</option><option>七政</option><option>占星骰子</option><option>小六壬</option></select>
+          <select id="cType" data-page-node-id="6XfvAfR69smycYiKFICc53"><option data-page-node-id="BiQlCjJvbGIWmdASDqBUU7">塔罗</option><option>雷诺曼</option><option>基博卡</option><option>马赛</option><option>八字</option><option>六爻</option><option data-page-node-id="IcxHMePr11cl3V6VuZQXsC">占星</option><option>七政</option><option>占星骰子</option><option>小六壬</option></select>
         </div>
         <div data-page-node-id="sClDuqSIvDdsHncNBpIBa7"><label data-page-node-id="4DLaqpDFcAYZFN6ikrkhew">领域</label>
           <select id="cDomain" data-page-node-id="jWjoVlPBnU5hO5PRXJZ6d4"></select>
@@ -2137,7 +2137,7 @@ const fileExt = name => (name.split('.').pop()||'').toLowerCase();
 const entryText = x => typeof x === 'string' ? x : (x && x.text) || '';
 const uid = () => 't' + Date.now() + Math.floor(Math.random()*1e4);
 const DOMAIN_COLOR = {'感情':'#c26d7d','事业':'#2f5d50','财运':'#b08d57','学业':'#5b7db1','其他':'#9a938a'};
-const TYPE_COLOR = {'塔罗':'#7a5ba8','雷诺曼':'#c26d7d','马赛':'#d0a24a','八字':'#b5854f','六爻':'#2f7a5a','占星':'#5b7db1','七政':'#4a8fb0','占星骰子':'#7f9ed6','小六壬':'#9a938a'};
+const TYPE_COLOR = {'塔罗':'#7a5ba8','雷诺曼':'#c26d7d','基博卡':'#7d8f5f','马赛':'#d0a24a','八字':'#b5854f','六爻':'#2f7a5a','占星':'#5b7db1','七政':'#4a8fb0','占星骰子':'#7f9ed6','小六壬':'#9a938a'};
 const VERDICT = {
   accurate:{label:'准', cls:'tag'},
   partial:{label:'部分准', cls:'tag gold'},
